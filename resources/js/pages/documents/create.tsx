@@ -69,7 +69,7 @@ const STNK_DEFAULTS: Record<string, string> = {
     'tahun-regristasi': '2010',
     'nomor-bpkb': 'B',
     'tanggal-stnk': '20-08-2015',
-    'lokasi-samsat': 'SURABAYA',
+    'lokasi-samsat': 'SURABAYA,',
     'provinsi-samsat': 'JAWA TIMUR',
     'tanggal-bayar': '20-08-2010',
 };

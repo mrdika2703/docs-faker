@@ -69,7 +69,7 @@ const DEFAULT_COMBINED_DATA = {
     stnk_silinder: '00100 CC',
     stnk_tahun_regristasi: '2010',
     stnk_nomor_bpkb: 'B',
-    stnk_lokasi_samsat: 'SURABAYA',
+    stnk_lokasi_samsat: 'SURABAYA,',
     stnk_provinsi_samsat: 'JAWA TIMUR',
     stnk_tanggal_bayar: '20-08-2010',
     stnk_tanggal_stnk: '20-08-2015',

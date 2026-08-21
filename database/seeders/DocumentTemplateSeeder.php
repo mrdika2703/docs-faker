@@ -67,7 +67,7 @@ class DocumentTemplateSeeder extends Seeder
             ['field_name' => 'tahun-regristasi', 'start_x' => 1342, 'start_y' => 650, 'max_chars' => 6,  'font_style' => 'stnk'],
             ['field_name' => 'nomor-bpkb',       'start_x' => 1342, 'start_y' => 697, 'max_chars' => 20, 'font_style' => 'stnk'],
             ['field_name' => 'tanggal-stnk',     'start_x' => 1419, 'start_y' => 844, 'max_chars' => 12, 'font_style' => 'stnk'],
-            ['field_name' => 'lokasi-samsat',    'start_x' => 1568, 'start_y' => 96,  'max_chars' => 20, 'font_style' => 'stnk'],
+            ['field_name' => 'lokasi-samsat',    'start_x' => 1778, 'start_y' => 97,  'max_chars' => 20, 'font_style' => 'stnk'],
             ['field_name' => 'provinsi-samsat',  'start_x' => 1994, 'start_y' => 93,  'max_chars' => 20, 'font_style' => 'stnk'],
             ['field_name' => 'tanggal-bayar',    'start_x' => 2368, 'start_y' => 87,  'max_chars' => 12, 'font_style' => 'stnk'],
         ];

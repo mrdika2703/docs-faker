@@ -107,11 +107,22 @@ class DocumentImageService
             }
 
             $chars = preg_split('//u', $value, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-            $currentX = $startX;
+
+            // Tentukan apakah field menggunakan right alignment (misal lokasi-samsat)
+            $isRightAlign = ($field->field_name === 'lokasi-samsat');
+
+            // Kumpulkan path gambar dan lebar masing-masing karakter terlebih dahulu
+            $letterItems = [];
+            $totalFieldWidth = 0;
 
             foreach ($chars as $char) {
                 if ($char === ' ') {
-                    $currentX += $spaceWidth;
+                    $letterItems[] = [
+                        'char' => ' ',
+                        'path' => null,
+                        'w'    => $spaceWidth,
+                    ];
+                    $totalFieldWidth += $spaceWidth;
                     continue;
                 }
 
@@ -121,6 +132,38 @@ class DocumentImageService
                     $letterPath = $this->getStnkLetterImagePath($char, $stnkLettersDir);
                 } else {
                     $letterPath = $this->getLetterImagePath($char, $lettersDir, $fontStyle);
+                }
+
+                $imgW = 0;
+                if ($letterPath && file_exists($letterPath)) {
+                    $size = @getimagesize($letterPath);
+                    $imgW = $size ? $size[0] : $charWidth;
+                }
+
+                $letterItems[] = [
+                    'char' => $char,
+                    'path' => $letterPath,
+                    'w'    => $imgW,
+                ];
+
+                $totalFieldWidth += $imgW + $letterSpacing;
+            }
+
+            // Kurangi trailing letter spacing jika karakter terakhir bukan spasi
+            if (! empty($letterItems) && $totalFieldWidth > 0 && end($letterItems)['char'] !== ' ') {
+                $totalFieldWidth -= $letterSpacing;
+            }
+
+            // Jika align kanan, start_x berfungsi sebagai batas kanan (right edge anchor)
+            $currentX = $isRightAlign ? ($startX - $totalFieldWidth) : $startX;
+
+            foreach ($letterItems as $item) {
+                $char = $item['char'];
+                $letterPath = $item['path'];
+
+                if ($char === ' ') {
+                    $currentX += $spaceWidth;
+                    continue;
                 }
 
                 if ($letterPath && file_exists($letterPath)) {
