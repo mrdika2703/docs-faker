@@ -107,14 +107,30 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
     // Download state
     const [isDownloadingItem, setIsDownloadingItem] = useState(false);
     const [downloadingTitle, setDownloadingTitle] = useState('');
+    const [downloadProgress, setDownloadProgress] = useState(0);
+    const [downloadStage, setDownloadStage] = useState('');
+
+    // Preview state
+    const [previewProgress, setPreviewProgress] = useState(0);
+    const [previewStage, setPreviewStage] = useState('');
 
     const handleDownload = async (item: HistoryItem) => {
         setIsDownloadingItem(true);
         setDownloadingTitle(`${item.template_name} (#${item.id})`);
+        setDownloadProgress(20);
+        setDownloadStage(`Menyiapkan data payload #${item.id}...`);
+
         try {
+            setDownloadProgress(70);
+            setDownloadStage(`Merender ${item.template_name} di RAM...`);
+
             const res = await fetch(`/documents/history/${item.id}/download`);
             if (!res.ok) throw new Error('Gagal mengunduh file.');
+
             const blob = await res.blob();
+            setDownloadProgress(100);
+            setDownloadStage('File siap! Membuka unduhan...');
+
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -143,6 +159,9 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
 
     // Handle Live RAM Preview
     const handlePreview = async (item: HistoryItem) => {
+        setPreviewProgress(20);
+        setPreviewStage(`Memuat record history #${item.id}...`);
+
         setPreviewDoc({
             title: `${item.template_name} (#${item.id})`,
             imageUrl: '',
@@ -152,13 +171,19 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
         });
 
         try {
+            setPreviewProgress(70);
+            setPreviewStage(`Merender ulang ${item.template_name} di RAM...`);
+
             const res = await fetch(`/documents/history/${item.id}/preview`, {
                 headers: {
                     Accept: 'application/json',
                 },
             });
+
             const data = await res.json();
             if (data.status === 'success') {
+                setPreviewProgress(100);
+                setPreviewStage('Preview siap!');
                 setPreviewDoc({
                     title: `${item.template_name} (#${item.id})`,
                     imageUrl: data.preview_url,
@@ -278,12 +303,16 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
             {/* Loading Overlays with Percentage */}
             <LoadingOverlay
                 isOpen={previewDoc?.isLoading === true}
+                progress={previewProgress}
+                stageText={previewStage}
                 title={`Merender Preview ${previewDoc?.title || ''}`}
                 type="preview"
                 badge="Preview"
             />
             <LoadingOverlay
                 isOpen={isDownloadingItem}
+                progress={downloadProgress}
+                stageText={downloadStage}
                 title={`Mengunduh ${downloadingTitle}`}
                 type="download"
                 badge="PNG"

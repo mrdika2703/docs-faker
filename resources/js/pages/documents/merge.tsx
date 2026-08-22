@@ -42,6 +42,8 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
         pajakHistories.length > 0 ? pajakHistories[0].id : null,
     );
     const [isDownloading, setIsDownloading] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState(0);
+    const [downloadStage, setDownloadStage] = useState('');
     const [downloadError, setDownloadError] = useState<string | null>(null);
 
     const selectedStnk = stnkHistories.find((item) => item.id === selectedStnkId);
@@ -57,12 +59,17 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
         if (!hasSelection) return;
 
         setIsDownloading(true);
+        setDownloadProgress(15);
+        setDownloadStage('Menyiapkan record history STNK & PAJAK...');
         setDownloadError(null);
 
         try {
             const token =
                 (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ||
                 '';
+
+            setDownloadProgress(70);
+            setDownloadStage('Merender gambar & mengemas layout Word A4 Landscape...');
 
             const response = await fetch('/documents/merge/download', {
                 method: 'POST',
@@ -83,6 +90,9 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
             }
 
             const blob = await response.blob();
+            setDownloadProgress(100);
+            setDownloadStage('File siap! Membuka unduhan...');
+
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -102,9 +112,11 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
         <>
             <Head title="Merge STNK & PAJAK (Word 2-Halaman)" />
 
-            {/* Loading Overlay with Percentage */}
+            {/* Loading Overlay with Real Progress */}
             <LoadingOverlay
                 isOpen={isDownloading}
+                progress={downloadProgress}
+                stageText={downloadStage}
                 title={`Menyusun Dokumen Word (${targetFilename})`}
                 type="word"
                 badge="Word (.docx)"

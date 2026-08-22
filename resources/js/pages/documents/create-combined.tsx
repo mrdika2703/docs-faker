@@ -98,8 +98,14 @@ export default function CreateCombinedPage({
     const [stnkPreview, setStnkPreview] = useState<string | null>(null);
     const [pajakPreview, setPajakPreview] = useState<string | null>(null);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+    const [previewProgress, setPreviewProgress] = useState(0);
+    const [previewStage, setPreviewStage] = useState('');
+
     const [isSavingToDb, setIsSavingToDb] = useState(false);
+
     const [isGeneratingWord, setIsGeneratingWord] = useState(false);
+    const [wordProgress, setWordProgress] = useState(0);
+    const [wordStage, setWordStage] = useState('');
 
     const handleInputChange = (key: string, value: string) => {
         setFormData((prev) => ({
@@ -113,37 +119,130 @@ export default function CreateCombinedPage({
         toast.info('Formulir direset ke data sampel gabungan default.');
     };
 
-    // Action 1: Live RAM Preview for both
+    // Helper: Split unified form data into STNK and PAJAK payloads
+    const splitCombinedPayload = (input: Record<string, string>) => {
+        const nopol = input.nopol || 'S 1234 WL';
+        const namaPemilik = input.nama_pemilik || 'NAMA LENGKAP';
+        const jenis = input.jenis || 'SEPEDA MOTOR';
+        const model = input.model || 'SEPEDA MOTOR';
+        const nomorRangka = input.nomor_rangka || 'MH1JBB11';
+        const nomorMesin = input.nomor_mesin || 'JBB11';
+        const warna = input.warna || 'HITAM';
+
+        const stnkData = {
+            nopol,
+            'nama-pemilik': namaPemilik,
+            alamat1: input.stnk_alamat1 || 'DSN. TEMPAT RW01/02 DS. TEMPAT',
+            alamat2: input.stnk_alamat2 || 'KEC. TEMPAT SBY',
+            merk: input.stnk_merk || 'HONDA',
+            type: input.stnk_type || 'NF11B21 MT',
+            jenis,
+            model,
+            'tahun-pembuatan': input.stnk_tahun_pembuatan || '2010',
+            silinder: input.stnk_silinder || '00100 CC',
+            'nomor-rangka': nomorRangka,
+            'nomor-mesin': nomorMesin,
+            warna,
+            'tahun-regristasi': input.stnk_tahun_regristasi || '2010',
+            'nomor-bpkb': input.stnk_nomor_bpkb || 'B',
+            'tanggal-stnk': input.stnk_tanggal_stnk || '20-08-2015',
+            'lokasi-samsat': input.stnk_lokasi_samsat || 'SURABAYA,',
+            'provinsi-samsat': input.stnk_provinsi_samsat || 'JAWA TIMUR',
+            'tanggal-bayar': input.stnk_tanggal_bayar || '20-08-2010',
+        };
+
+        const pajakData = {
+            nopol,
+            'nama-pemilik': namaPemilik,
+            alamat1: input.pajak_alamat1 || 'NAMA TEMPAT',
+            alamat2: input.pajak_alamat2 || 'RW01/02 / SBY / DS. TEMPAT',
+            alamat3: input.pajak_alamat3 || 'MOJOAGUNG',
+            merk: input.pajak_merk || 'HONDA / NF11B21 MT',
+            jenis,
+            model,
+            'tahun-cc': input.pajak_tahun_cc || '2013/100',
+            warna,
+            'nomor-rangka': nomorRangka,
+            'nomor-mesin': nomorMesin,
+            'tanggal-faktur': input.pajak_tanggal_faktur || '15-08-2010',
+            'tanggal-pajak': input.pajak_tanggal_pajak || '20-08-2015',
+            'nopol-lama': input.pajak_nopol_lama || '-',
+            'tanggal-bayar': input.pajak_tanggal_bayar || '19-08-2014',
+            'tahun-bayar': input.pajak_tahun_bayar || '14',
+        };
+
+        return { stnkData, pajakData };
+    };
+
+    // Action 1: Progressive Multi-Stage Real Preview
     const handlePreviewBoth = async () => {
         setIsPreviewLoading(true);
+        setPreviewProgress(10);
+        setPreviewStage('Memvalidasi input data...');
+
+        const token = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute('content') || '';
+
         try {
-            const token = document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content');
-            const res = await fetch('/documents/combined/preview', {
+            const { stnkData, pajakData } = splitCombinedPayload(formData);
+
+            // Step 1: Render STNK Image in RAM
+            setPreviewProgress(45);
+            setPreviewStage('Merender STNK (Multi-Font & Color Grading)...');
+
+            const stnkRes = await fetch('/documents/preview', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
-                    'X-CSRF-TOKEN': token || '',
+                    'X-CSRF-TOKEN': token,
                 },
                 body: JSON.stringify({
-                    input_data: formData,
+                    template_id: stnkTemplate.id,
+                    input_data: stnkData,
                 }),
             });
 
-            const data = await res.json();
-            if (res.ok && data.status === 'success') {
-                setStnkPreview(data.stnk_preview_url);
-                setPajakPreview(data.pajak_preview_url);
-                toast.success(
-                    'Preview STNK & PAJAK berhasil di-render di RAM!',
-                );
-            } else {
-                toast.error(data.message || 'Gagal membuat preview.');
+            const stnkJson = await stnkRes.json();
+            if (!stnkRes.ok || stnkJson.status !== 'success') {
+                throw new Error(stnkJson.message || 'Gagal merender preview STNK.');
             }
-        } catch {
-            toast.error('Gagal menghubungi API preview.');
+
+            // Immediately set STNK preview
+            setStnkPreview(stnkJson.preview_url);
+            setPreviewProgress(60);
+            setPreviewStage('STNK selesai! Merender dokumen PAJAK di RAM...');
+
+            // Step 2: Render PAJAK Image in RAM
+            setPreviewProgress(88);
+            setPreviewStage('Menerapkan Color Grading & Composite PAJAK...');
+
+            const pajakRes = await fetch('/documents/preview', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': token,
+                },
+                body: JSON.stringify({
+                    template_id: pajakTemplate.id,
+                    input_data: pajakData,
+                }),
+            });
+
+            const pajakJson = await pajakRes.json();
+            if (!pajakRes.ok || pajakJson.status !== 'success') {
+                throw new Error(pajakJson.message || 'Gagal merender preview PAJAK.');
+            }
+
+            // Set PAJAK preview
+            setPajakPreview(pajakJson.preview_url);
+            setPreviewProgress(100);
+            setPreviewStage('Selesai! Live preview STNK & PAJAK siap.');
+            toast.success('Preview STNK & PAJAK berhasil di-render di RAM!');
+        } catch (err: any) {
+            toast.error(err.message || 'Gagal menghubungi API preview.');
         } finally {
             setIsPreviewLoading(false);
         }
@@ -183,21 +282,26 @@ export default function CreateCombinedPage({
         }
     };
 
-    // Action 3: Save to DB & Download Word Document
+    // Action 3: Save to DB & Download Word Document with real progress
     const handleGenerateWord = async () => {
         setIsGeneratingWord(true);
-        toast.info('Menyimpan ke DB & menyusun dokumen Word (A4 Landscape)...');
+        setWordProgress(15);
+        setWordStage('Menyimpan data STNK & PAJAK ke history...');
 
         try {
             const token = document
                 .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content');
+                ?.getAttribute('content') || '';
+
+            setWordProgress(35);
+            setWordStage('Merender gambar & menyusun 2 Halaman Word A4 Landscape...');
+
             const res = await fetch('/documents/combined/generate-word', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'X-CSRF-TOKEN': token || '',
+                    'X-CSRF-TOKEN': token,
                 },
                 body: JSON.stringify({
                     input_data: formData,
@@ -208,7 +312,13 @@ export default function CreateCombinedPage({
                 throw new Error('Gagal membuat dokumen Word.');
             }
 
+            setWordProgress(80);
+            setWordStage('Menerima payload file dokumen Word (.docx)...');
+
             const blob = await res.blob();
+            setWordProgress(100);
+            setWordStage('File siap! Membuka unduhan...');
+
             const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = downloadUrl;
@@ -220,8 +330,8 @@ export default function CreateCombinedPage({
             document.body.removeChild(a);
 
             toast.success('Dokumen Word (.docx) berhasil disimpan & diunduh!');
-        } catch {
-            toast.error('Gagal menyimpan & mengunduh dokumen Word.');
+        } catch (err: any) {
+            toast.error(err.message || 'Gagal menyimpan & mengunduh dokumen Word.');
         } finally {
             setIsGeneratingWord(false);
         }
@@ -231,15 +341,19 @@ export default function CreateCombinedPage({
         <>
             <Head title="Input STNK & PAJAK (1 Halaman)" />
 
-            {/* Loading Overlays with Percentage */}
+            {/* Loading Overlays with Real Accurate Multi-Stage Progress */}
             <LoadingOverlay
                 isOpen={isPreviewLoading}
+                progress={previewProgress}
+                stageText={previewStage}
                 title="Merender Preview STNK & PAJAK"
                 type="preview"
                 badge="Live RAM"
             />
             <LoadingOverlay
                 isOpen={isGeneratingWord}
+                progress={wordProgress}
+                stageText={wordStage}
                 title="Menyusun Dokumen Word (.docx)"
                 type="word"
                 badge="A4 Landscape"

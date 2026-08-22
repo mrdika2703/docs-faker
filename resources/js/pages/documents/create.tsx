@@ -115,8 +115,15 @@ export default function CreateDocument({
 
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+    const [previewProgress, setPreviewProgress] = useState(0);
+    const [previewStage, setPreviewStage] = useState('');
+
     const [isSavingToDb, setIsSavingToDb] = useState(false);
+
     const [isGenerating, setIsGenerating] = useState(false);
+    const [generateProgress, setGenerateProgress] = useState(0);
+    const [generateStage, setGenerateStage] = useState('');
+
     const [rawBgModalOpen, setRawBgModalOpen] = useState(false);
 
     const handleInputChange = (fieldName: string, value: string) => {
@@ -136,16 +143,23 @@ export default function CreateDocument({
     const handlePreview = async () => {
         if (!selectedTemplate) return;
         setIsPreviewLoading(true);
+        setPreviewProgress(20);
+        setPreviewStage('Memvalidasi input data formulir...');
+
         try {
             const token = document
                 .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content');
+                ?.getAttribute('content') || '';
+
+            setPreviewProgress(70);
+            setPreviewStage(`Merender ${selectedTemplate.name} (Multi-Font & Color Grading)...`);
+
             const res = await fetch('/documents/preview', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
-                    'X-CSRF-TOKEN': token || '',
+                    'X-CSRF-TOKEN': token,
                 },
                 body: JSON.stringify({
                     template_id: selectedTemplate.id,
@@ -154,13 +168,15 @@ export default function CreateDocument({
             });
 
             const data = await res.json();
-            if (data.status === 'success') {
+            if (res.ok && data.status === 'success') {
                 setPreviewImage(data.preview_url);
+                setPreviewProgress(100);
+                setPreviewStage('Preview siap ditampilkan!');
                 toast.success(
                     'Live preview rendered in RAM with multi-font compositing!',
                 );
             } else {
-                toast.error('Failed to generate preview.');
+                toast.error(data.message || 'Failed to generate preview.');
             }
         } catch {
             toast.error('Error connecting to preview API.');
@@ -208,18 +224,23 @@ export default function CreateDocument({
     const handleSaveAndDownload = async () => {
         if (!selectedTemplate) return;
         setIsGenerating(true);
-        toast.info('Saving JSON & rendering multi-font document in RAM...');
+        setGenerateProgress(20);
+        setGenerateStage('Menyimpan data payload ke history...');
 
         try {
             const token = document
                 .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content');
+                ?.getAttribute('content') || '';
+
+            setGenerateProgress(70);
+            setGenerateStage(`Merender ${selectedTemplate.name} resolusi penuh di RAM...`);
+
             const res = await fetch('/documents/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'image/png, application/json',
-                    'X-CSRF-TOKEN': token || '',
+                    'X-CSRF-TOKEN': token,
                 },
                 body: JSON.stringify({
                     template_id: selectedTemplate.id,
@@ -232,6 +253,9 @@ export default function CreateDocument({
             }
 
             const blob = await res.blob();
+            setGenerateProgress(100);
+            setGenerateStage('File PNG siap! Membuka unduhan...');
+
             const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = downloadUrl;
@@ -242,8 +266,8 @@ export default function CreateDocument({
             document.body.removeChild(a);
 
             toast.success('Document saved & downloaded successfully!');
-        } catch {
-            toast.error('Failed to save and generate document.');
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to save and generate document.');
         } finally {
             setIsGenerating(false);
         }
@@ -310,12 +334,16 @@ export default function CreateDocument({
             {/* Loading Overlays with Percentage */}
             <LoadingOverlay
                 isOpen={isPreviewLoading}
+                progress={previewProgress}
+                stageText={previewStage}
                 title={`Merender Preview ${selectedTemplate?.name || 'Dokumen'}`}
                 type="preview"
                 badge="Preview"
             />
             <LoadingOverlay
                 isOpen={isGenerating}
+                progress={generateProgress}
+                stageText={generateStage}
                 title={`Mengunduh ${selectedTemplate?.name || 'Dokumen'}`}
                 type="download"
                 badge="PNG"
