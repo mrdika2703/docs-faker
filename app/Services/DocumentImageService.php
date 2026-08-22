@@ -8,13 +8,26 @@ use RuntimeException;
 class DocumentImageService
 {
     /**
-     * Render document image on-the-fly in RAM and return raw PNG binary string.
-     * Memory is freed immediately after rendering.
+     * In-memory cache for pre-graded or raw base images.
+     * @var array<string, \GdImage>
+     */
+    protected static array $bgMemoryCache = [];
+
+    /**
+     * In-memory cache for loaded letter glyph images and dimensions.
+     * @var array<string, array{img: \GdImage, w: int, h: int}|null>
+     */
+    protected static array $glyphCache = [];
+
+    /**
+     * Render document image on-the-fly in RAM and return binary string.
+     * Fast pre-baked background compositing and in-memory glyph caching.
      *
      * @param  array<string, mixed>  $inputData
-     * @return string Raw PNG binary
+     * @param  bool  $isPreview When true, optimizes encoding for UI preview speed
+     * @return string Raw image binary
      */
-    public function renderImage(Template $template, array $inputData): string
+    public function renderImage(Template $template, array $inputData, bool $isPreview = false, string $format = 'png'): string
     {
         // ── Resolve background path ──────────────────────────────────────────
         $isStnk = $template->dummy_bg_path === 'stnk_bg';
@@ -40,22 +53,21 @@ class DocumentImageService
             throw new RuntimeException("Template background file not found: {$bgPath}");
         }
 
-        // ── Load background image ────────────────────────────────────────────
-        $ext = strtolower(pathinfo($bgPath, PATHINFO_EXTENSION));
-        if ($ext === 'jpg' || $ext === 'jpeg') {
-            $baseImage = imagecreatefromjpeg($bgPath);
-        } else {
-            $baseImage = imagecreatefrompng($bgPath);
-        }
+        // ── Fast Canvas Cloning from Pre-graded/Cached Background ────────────
+        $bgResource = ($isStnk || $isPajak)
+            ? $this->getGradedBackground($bgPath, $isPajak ? 'pajak' : 'stnk')
+            : $this->getRawBackground($bgPath);
 
-        if (! $baseImage) {
-            throw new RuntimeException("Failed to initialize template background from {$bgPath}");
-        }
+        $bgW = imagesx($bgResource);
+        $bgH = imagesy($bgResource);
 
-        imagealphablending($baseImage, true);
+        $baseImage = imagecreatetruecolor($bgW, $bgH);
+        imagealphablending($baseImage, false);
         imagesavealpha($baseImage, true);
+        imagecopy($baseImage, $bgResource, 0, 0, 0, 0, $bgW, $bgH);
+        imagealphablending($baseImage, true);
 
-        // ── Resolve letters directory ────────────────────────────────────────
+        // ── Resolve letters directories ───────────────────────────────────────
         $lettersDir = storage_path('app/dummy_letters');
         $stnkLettersDir = public_path('images/STNK');
         $pajakBaseDir = public_path('images/PAJAK');
@@ -111,39 +123,28 @@ class DocumentImageService
             // Tentukan apakah field menggunakan right alignment (misal lokasi-samsat)
             $isRightAlign = ($field->field_name === 'lokasi-samsat');
 
-            // Kumpulkan path gambar dan lebar masing-masing karakter terlebih dahulu
+            // Kumpulkan glyph dan lebar masing-masing karakter terlebih dahulu
             $letterItems = [];
             $totalFieldWidth = 0;
 
             foreach ($chars as $char) {
                 if ($char === ' ') {
                     $letterItems[] = [
-                        'char' => ' ',
-                        'path' => null,
-                        'w'    => $spaceWidth,
+                        'char'  => ' ',
+                        'glyph' => null,
+                        'w'     => $spaceWidth,
                     ];
                     $totalFieldWidth += $spaceWidth;
                     continue;
                 }
 
-                if ($isPajakFont) {
-                    $letterPath = $this->getPajakLetterImagePath($char, $pajakBaseDir, $fontStyle);
-                } elseif ($isStnkFont) {
-                    $letterPath = $this->getStnkLetterImagePath($char, $stnkLettersDir);
-                } else {
-                    $letterPath = $this->getLetterImagePath($char, $lettersDir, $fontStyle);
-                }
-
-                $imgW = 0;
-                if ($letterPath && file_exists($letterPath)) {
-                    $size = @getimagesize($letterPath);
-                    $imgW = $size ? $size[0] : $charWidth;
-                }
+                $glyph = $this->getGlyph($char, $lettersDir, $stnkLettersDir, $pajakBaseDir, $fontStyle);
+                $imgW = $glyph ? $glyph['w'] : $charWidth;
 
                 $letterItems[] = [
-                    'char' => $char,
-                    'path' => $letterPath,
-                    'w'    => $imgW,
+                    'char'  => $char,
+                    'glyph' => $glyph,
+                    'w'     => $imgW,
                 ];
 
                 $totalFieldWidth += $imgW + $letterSpacing;
@@ -159,56 +160,55 @@ class DocumentImageService
 
             foreach ($letterItems as $item) {
                 $char = $item['char'];
-                $letterPath = $item['path'];
+                $glyph = $item['glyph'];
 
                 if ($char === ' ') {
                     $currentX += $spaceWidth;
                     continue;
                 }
 
-                if ($letterPath && file_exists($letterPath)) {
-                    $letterImg = @imagecreatefrompng($letterPath);
-                    if ($letterImg) {
-                        $imgW = imagesx($letterImg);
-                        $imgH = imagesy($letterImg);
+                if ($glyph !== null) {
+                    $imgW = $glyph['w'];
+                    $imgH = $glyph['h'];
 
-                        // Rata posisi bagian bawah (bottom baseline alignment):
-                        // Sisi bawah setiap gambar huruf/simbol tepat berada di garis start_y.
-                        // Khusus tanda strip (-), diposisikan di tengah tinggi huruf acuan.
-                        if ($char === '-' || $char === '—') {
-                            $posY = $startY - (int) round(($refHeight + $imgH) / 2);
-                        } else {
-                            $posY = $startY - $imgH;
-                        }
-
-                        $posX = $currentX;
-
-                        imagecopy(
-                            $baseImage,
-                            $letterImg,
-                            $posX,
-                            $posY,
-                            0,
-                            0,
-                            $imgW,
-                            $imgH
-                        );
-
-                        // Maju secara proporsional sesuai lebar gambar huruf asli + jarak spasi
-                        $currentX += $imgW + $letterSpacing;
-
-                        imagedestroy($letterImg);
-                        unset($letterImg);
+                    // Rata posisi bagian bawah (bottom baseline alignment):
+                    // Sisi bawah setiap gambar huruf/simbol tepat berada di garis start_y.
+                    // Khusus tanda strip (-), diposisikan di tengah tinggi huruf acuan.
+                    if ($char === '-' || $char === '—') {
+                        $posY = $startY - (int) round(($refHeight + $imgH) / 2);
+                    } else {
+                        $posY = $startY - $imgH;
                     }
+
+                    $posX = $currentX;
+
+                    imagecopy(
+                        $baseImage,
+                        $glyph['img'],
+                        $posX,
+                        $posY,
+                        0,
+                        0,
+                        $imgW,
+                        $imgH
+                    );
+
+                    // Maju secara proporsional sesuai lebar gambar huruf asli + jarak spasi
+                    $currentX += $imgW + $letterSpacing;
                 }
             }
         }
 
-        // ── Apply Photoshop Color Grading ──────────────────────────────────
-        $this->applyPhotoshopGrading($baseImage, $isPajak ? 'pajak' : 'stnk');
-
+        // ── Fast Output Encoding ──────────────────────────────────────────────
         ob_start();
-        imagepng($baseImage, null, 6);
+        if ($format === 'webp' && function_exists('imagewebp')) {
+            imagewebp($baseImage, null, 82);
+        } elseif ($format === 'jpeg' || $format === 'jpg') {
+            imagejpeg($baseImage, null, 85);
+        } else {
+            // PNG level 3 for rapid compression without quality loss
+            imagepng($baseImage, null, 3);
+        }
         $binary = (string) ob_get_clean();
 
         // Immediately free RAM
@@ -222,14 +222,155 @@ class DocumentImageService
      * Render document image on-the-fly and return as data URI string.
      *
      * @param  array<string, mixed>  $inputData
+     * @param  string  $format 'png', 'webp', or 'jpeg'
      */
-    public function renderBase64(Template $template, array $inputData): string
+    public function renderBase64(Template $template, array $inputData, string $format = 'png'): string
     {
-        $binary = $this->renderImage($template, $inputData);
+        $binary = $this->renderImage($template, $inputData, false, $format);
+        $mime = match ($format) {
+            'webp' => 'image/webp',
+            'jpeg', 'jpg' => 'image/jpeg',
+            default => 'image/png',
+        };
         $base64 = base64_encode($binary);
         unset($binary);
 
-        return 'data:image/png;base64,' . $base64;
+        return 'data:' . $mime . ';base64,' . $base64;
+    }
+
+    /**
+     * Get or build cached pre-graded background image.
+     */
+    public function getGradedBackground(string $bgPath, string $type): \GdImage
+    {
+        if (isset(self::$bgMemoryCache[$type])) {
+            return self::$bgMemoryCache[$type];
+        }
+
+        $cacheDir = storage_path('app/cache');
+        if (! is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0755, true);
+        }
+
+        $mtime = file_exists($bgPath) ? filemtime($bgPath) : 0;
+        $serviceMtime = filemtime(__FILE__);
+        $cacheFile = "{$cacheDir}/bg_graded_{$type}_" . md5($bgPath . '_' . $mtime . '_' . $serviceMtime) . '.png';
+
+        if (file_exists($cacheFile)) {
+            $cachedImg = @imagecreatefrompng($cacheFile);
+            if ($cachedImg) {
+                imagealphablending($cachedImg, true);
+                imagesavealpha($cachedImg, true);
+                self::$bgMemoryCache[$type] = $cachedImg;
+                return $cachedImg;
+            }
+        }
+
+        // Generate graded background once
+        $ext = strtolower(pathinfo($bgPath, PATHINFO_EXTENSION));
+        if ($ext === 'jpg' || $ext === 'jpeg') {
+            $rawImg = @imagecreatefromjpeg($bgPath);
+        } else {
+            $rawImg = @imagecreatefrompng($bgPath);
+        }
+
+        if (! $rawImg) {
+            throw new RuntimeException("Failed to load background image from {$bgPath}");
+        }
+
+        imagealphablending($rawImg, true);
+        imagesavealpha($rawImg, true);
+
+        // Apply Photoshop grading to background once
+        $this->applyPhotoshopGrading($rawImg, $type);
+
+        // Save to persistent file cache for subsequent requests
+        imagepng($rawImg, $cacheFile, 6);
+
+        self::$bgMemoryCache[$type] = $rawImg;
+        return $rawImg;
+    }
+
+    /**
+     * Get or load raw un-graded background image.
+     */
+    public function getRawBackground(string $bgPath): \GdImage
+    {
+        $cacheKey = 'raw_' . md5($bgPath);
+        if (isset(self::$bgMemoryCache[$cacheKey])) {
+            return self::$bgMemoryCache[$cacheKey];
+        }
+
+        $ext = strtolower(pathinfo($bgPath, PATHINFO_EXTENSION));
+        if ($ext === 'jpg' || $ext === 'jpeg') {
+            $rawImg = @imagecreatefromjpeg($bgPath);
+        } else {
+            $rawImg = @imagecreatefrompng($bgPath);
+        }
+
+        if (! $rawImg) {
+            throw new RuntimeException("Failed to load raw background image from {$bgPath}");
+        }
+
+        imagealphablending($rawImg, true);
+        imagesavealpha($rawImg, true);
+
+        self::$bgMemoryCache[$cacheKey] = $rawImg;
+        return $rawImg;
+    }
+
+    /**
+     * Get or load letter glyph GD image and dimensions with in-memory caching.
+     *
+     * @return array{img: \GdImage, w: int, h: int}|null
+     */
+    public function getGlyph(string $char, string $lettersDir, string $stnkLettersDir, string $pajakBaseDir, string $fontStyle): ?array
+    {
+        $cacheKey = $fontStyle . ':' . $char;
+        if (array_key_exists($cacheKey, self::$glyphCache)) {
+            return self::$glyphCache[$cacheKey];
+        }
+
+        $isPajakFont = str_starts_with($fontStyle, 'pajak');
+        $isStnkFont  = $fontStyle === 'stnk';
+
+        if ($isPajakFont) {
+            $letterPath = $this->getPajakLetterImagePath($char, $pajakBaseDir, $fontStyle);
+        } elseif ($isStnkFont) {
+            $letterPath = $this->getStnkLetterImagePath($char, $stnkLettersDir);
+        } else {
+            $letterPath = $this->getLetterImagePath($char, $lettersDir, $fontStyle);
+        }
+
+        if (! $letterPath || ! file_exists($letterPath)) {
+            self::$glyphCache[$cacheKey] = null;
+            return null;
+        }
+
+        $img = @imagecreatefrompng($letterPath);
+        if (! $img) {
+            self::$glyphCache[$cacheKey] = null;
+            return null;
+        }
+
+        // Apply Photoshop color grading to glyph to match template background
+        if ($isPajakFont) {
+            $this->applyPhotoshopGradingToGlyph($img, 'pajak');
+        } elseif ($isStnkFont) {
+            $this->applyPhotoshopGradingToGlyph($img, 'stnk');
+        } else {
+            imagealphablending($img, true);
+            imagesavealpha($img, true);
+        }
+
+        $glyph = [
+            'img' => $img,
+            'w'   => imagesx($img),
+            'h'   => imagesy($img),
+        ];
+
+        self::$glyphCache[$cacheKey] = $glyph;
+        return $glyph;
     }
 
     /**
@@ -607,6 +748,54 @@ class DocumentImageService
                 imagesetpixel($image, $x, $y, $newColor);
             }
         }
+    }
+
+    /**
+     * Apply Photoshop color grading to an individual letter glyph image with alpha preservation.
+     */
+    public function applyPhotoshopGradingToGlyph(\GdImage $image, string $type = 'stnk'): void
+    {
+        $lutBin = $this->getLutBinary($type);
+        $w = imagesx($image);
+        $h = imagesy($image);
+
+        // Precompute 256-step to 32-step index mapping
+        static $idxMap = null;
+        if ($idxMap === null) {
+            $idxMap = [];
+            for ($i = 0; $i < 256; $i++) {
+                $idxMap[$i] = (int) round(($i / 255.0) * 32.0);
+            }
+        }
+
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+
+        for ($y = 0; $y < $h; $y++) {
+            for ($x = 0; $x < $w; $x++) {
+                $rgb = imagecolorat($image, $x, $y);
+                $alpha = ($rgb >> 24) & 0x7F;
+
+                // Skip fully transparent pixels
+                if ($alpha >= 127) {
+                    continue;
+                }
+
+                $r = $idxMap[($rgb >> 16) & 0xFF];
+                $g = $idxMap[($rgb >> 8) & 0xFF];
+                $b = $idxMap[$rgb & 0xFF];
+
+                $offset = ($r * 1089 + $g * 33 + $b) * 3;
+                $nr = ord($lutBin[$offset]);
+                $ng = ord($lutBin[$offset + 1]);
+                $nb = ord($lutBin[$offset + 2]);
+
+                $newColor = ($alpha << 24) | ($nr << 16) | ($ng << 8) | $nb;
+                imagesetpixel($image, $x, $y, $newColor);
+            }
+        }
+
+        imagealphablending($image, true);
     }
 
     /**

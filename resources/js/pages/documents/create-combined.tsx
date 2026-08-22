@@ -25,6 +25,7 @@ import {
     Save,
     Sparkles,
 } from 'lucide-react';
+import { LoadingOverlay } from '@/components/loading-overlay';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -229,6 +230,26 @@ export default function CreateCombinedPage({
     return (
         <>
             <Head title="Input STNK & PAJAK (1 Halaman)" />
+
+            {/* Loading Overlays with Percentage */}
+            <LoadingOverlay
+                isOpen={isPreviewLoading}
+                title="Merender Preview STNK & PAJAK"
+                type="preview"
+                badge="Live RAM"
+            />
+            <LoadingOverlay
+                isOpen={isGeneratingWord}
+                title="Menyusun Dokumen Word (.docx)"
+                type="word"
+                badge="A4 Landscape"
+            />
+            <LoadingOverlay
+                isOpen={isSavingToDb}
+                title="Menyimpan ke Database"
+                type="save"
+                badge="History"
+            />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 {/* Header */}

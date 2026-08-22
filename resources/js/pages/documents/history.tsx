@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { LoadingOverlay } from '@/components/loading-overlay';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     AlertTriangle,
@@ -102,6 +103,33 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
     // Delete state
     const [deletingItem, setDeletingItem] = useState<HistoryItem | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Download state
+    const [isDownloadingItem, setIsDownloadingItem] = useState(false);
+    const [downloadingTitle, setDownloadingTitle] = useState('');
+
+    const handleDownload = async (item: HistoryItem) => {
+        setIsDownloadingItem(true);
+        setDownloadingTitle(`${item.template_name} (#${item.id})`);
+        try {
+            const res = await fetch(`/documents/history/${item.id}/download`);
+            if (!res.ok) throw new Error('Gagal mengunduh file.');
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `doc-${item.template_name.toLowerCase().replace(/\s+/g, '-')}-${item.id}.png`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            toast.success('Dokumen PNG berhasil diunduh!');
+        } catch {
+            toast.error('Gagal mengunduh dokumen.');
+        } finally {
+            setIsDownloadingItem(false);
+        }
+    };
 
     const filteredItems = items.filter((item) => {
         const query = search.toLowerCase();
@@ -246,6 +274,21 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
     return (
         <>
             <Head title="History Dokumen" />
+
+            {/* Loading Overlays with Percentage */}
+            <LoadingOverlay
+                isOpen={previewDoc?.isLoading === true}
+                title={`Merender Preview ${previewDoc?.title || ''}`}
+                type="preview"
+                badge="Preview"
+            />
+            <LoadingOverlay
+                isOpen={isDownloadingItem}
+                title={`Mengunduh ${downloadingTitle}`}
+                type="download"
+                badge="PNG"
+            />
+
             <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-8">
                 {/* Header */}
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -478,20 +521,20 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
                                                             </Button>
 
                                                             {/* Download */}
-                                                            <a
-                                                                href={`/documents/history/${item.id}/download`}
-                                                                download
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 gap-1 text-xs"
+                                                                onClick={() =>
+                                                                    handleDownload(
+                                                                        item,
+                                                                    )
+                                                                }
+                                                                title="Download PNG"
                                                             >
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    className="h-8 gap-1 text-xs"
-                                                                    title="Download PNG"
-                                                                >
-                                                                    <Download className="size-3.5" />
-                                                                    Unduh
-                                                                </Button>
-                                                            </a>
+                                                                <Download className="size-3.5" />
+                                                                Unduh
+                                                            </Button>
 
                                                             {/* Delete */}
                                                             <Button

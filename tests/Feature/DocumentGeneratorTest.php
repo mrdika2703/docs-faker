@@ -165,4 +165,31 @@ class DocumentGeneratorTest extends TestCase
             $this->assertStringStartsWith('data:image/png;base64,', $response->json('preview_url'));
         }
     }
+
+    public function test_combined_preview_and_generate_word(): void
+    {
+        $stnk = Template::where('name', 'STNK')->first();
+        $pajak = Template::where('name', 'PAJAK')->first();
+
+        if ($stnk && $pajak) {
+            $inputData = [
+                'nopol' => 'L 9999 XX',
+                'nama_pemilik' => 'TEST USER COMBINED',
+            ];
+
+            // 1. Preview combined
+            $previewRes = $this->actingAs($this->user)->postJson('/documents/combined/preview', [
+                'input_data' => $inputData,
+            ]);
+            $previewRes->assertStatus(200)
+                ->assertJsonStructure(['status', 'stnk_preview_url', 'pajak_preview_url']);
+
+            // 2. Generate Word (.docx) combined
+            $wordRes = $this->actingAs($this->user)->post('/documents/combined/generate-word', [
+                'input_data' => $inputData,
+            ]);
+            $wordRes->assertStatus(200)
+                ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        }
+    }
 }

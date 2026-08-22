@@ -23,10 +23,10 @@ class DocumentTemplateSeeder extends Seeder
             ['field_name' => 'nopol',            'start_x' => 446, 'start_y' => 191, 'max_chars' => 12, 'font_style' => 'pajak_bold'],
 
             // ====== Regular-U Font ======
-            ['field_name' => 'nama-pemilik',     'start_x' => 446, 'start_y' => 243, 'max_chars' => 30, 'font_style' => 'pajak_regular_u'],
-            ['field_name' => 'alamat1',          'start_x' => 446, 'start_y' => 289, 'max_chars' => 35, 'font_style' => 'pajak_regular_u'],
-            ['field_name' => 'alamat2',          'start_x' => 446, 'start_y' => 338, 'max_chars' => 30, 'font_style' => 'pajak_regular_u'],
-            ['field_name' => 'alamat3',          'start_x' => 859, 'start_y' => 191, 'max_chars' => 30, 'font_style' => 'pajak_regular_u'],
+            ['field_name' => 'nama-pemilik',     'start_x' => 446, 'start_y' => 243, 'max_chars' => 50, 'font_style' => 'pajak_regular_u'],
+            ['field_name' => 'alamat1',          'start_x' => 446, 'start_y' => 289, 'max_chars' => 50, 'font_style' => 'pajak_regular_u'],
+            ['field_name' => 'alamat2',          'start_x' => 446, 'start_y' => 338, 'max_chars' => 50, 'font_style' => 'pajak_regular_u'],
+            ['field_name' => 'alamat3',          'start_x' => 859, 'start_y' => 191, 'max_chars' => 50, 'font_style' => 'pajak_regular_u'],
 
             // ====== Regular-B Font ======
             ['field_name' => 'merk',             'start_x' => 449, 'start_y' => 388, 'max_chars' => 25, 'font_style' => 'pajak_regular_b'],
@@ -51,8 +51,8 @@ class DocumentTemplateSeeder extends Seeder
             // ====== KOLOM KIRI ======
             ['field_name' => 'nopol',            'start_x' => 449, 'start_y' => 307, 'max_chars' => 12, 'font_style' => 'stnk'],
             ['field_name' => 'nama-pemilik',     'start_x' => 449, 'start_y' => 360, 'max_chars' => 30, 'font_style' => 'stnk'],
-            ['field_name' => 'alamat1',          'start_x' => 449, 'start_y' => 410, 'max_chars' => 35, 'font_style' => 'stnk'],
-            ['field_name' => 'alamat2',          'start_x' => 449, 'start_y' => 459, 'max_chars' => 30, 'font_style' => 'stnk'],
+            ['field_name' => 'alamat1',          'start_x' => 449, 'start_y' => 410, 'max_chars' => 50, 'font_style' => 'stnk'],
+            ['field_name' => 'alamat2',          'start_x' => 449, 'start_y' => 459, 'max_chars' => 50, 'font_style' => 'stnk'],
             ['field_name' => 'merk',             'start_x' => 449, 'start_y' => 504, 'max_chars' => 20, 'font_style' => 'stnk'],
             ['field_name' => 'type',             'start_x' => 447, 'start_y' => 554, 'max_chars' => 20, 'font_style' => 'stnk'],
             ['field_name' => 'jenis',            'start_x' => 445, 'start_y' => 603, 'max_chars' => 20, 'font_style' => 'stnk'],

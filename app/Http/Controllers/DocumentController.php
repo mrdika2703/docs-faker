@@ -77,7 +77,7 @@ class DocumentController extends Controller
         }
 
         // Handle Pajak template — background lives in public/images/PAJAK/
-        if ($tpl->dummy_bg_path === 'pajak_bg' || strtolower($tpl->name) === 'doc b' || strtolower($tpl->name) === 'pajak') {
+        if ($tpl->dummy_bg_path === 'pajak_bg' || strtolower($tpl->name) === 'pajak') {
             $bgPath = $this->imageService->resolvePajakBackground();
             if (! file_exists($bgPath)) {
                 abort(SymfonyResponse::HTTP_NOT_FOUND, 'Pajak background image not found.');
@@ -90,7 +90,7 @@ class DocumentController extends Controller
         }
 
         // Handle STNK template — background lives in public/images/STNK/
-        if ($tpl->dummy_bg_path === 'stnk_bg' || strtolower($tpl->name) === 'doc a' || strtolower($tpl->name) === 'stnk') {
+        if ($tpl->dummy_bg_path === 'stnk_bg' || strtolower($tpl->name) === 'stnk') {
             $bgPath = public_path('images/STNK/background.jpg');
             if (! file_exists($bgPath)) {
                 abort(SymfonyResponse::HTTP_NOT_FOUND, 'STNK background image not found.');

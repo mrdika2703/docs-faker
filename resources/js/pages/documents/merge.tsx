@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { LoadingOverlay } from '@/components/loading-overlay';
 import { Head, Link } from '@inertiajs/react';
 import {
     AlertCircle,
@@ -100,6 +101,14 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
     return (
         <>
             <Head title="Merge STNK & PAJAK (Word 2-Halaman)" />
+
+            {/* Loading Overlay with Percentage */}
+            <LoadingOverlay
+                isOpen={isDownloading}
+                title={`Menyusun Dokumen Word (${targetFilename})`}
+                type="word"
+                badge="Word (.docx)"
+            />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 {/* Header */}

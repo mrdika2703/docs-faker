@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { LoadingOverlay } from '@/components/loading-overlay';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -305,6 +306,27 @@ export default function CreateDocument({
     return (
         <>
             <Head title={`Input ${selectedTemplate?.name || 'Document'}`} />
+
+            {/* Loading Overlays with Percentage */}
+            <LoadingOverlay
+                isOpen={isPreviewLoading}
+                title={`Merender Preview ${selectedTemplate?.name || 'Dokumen'}`}
+                type="preview"
+                badge="Preview"
+            />
+            <LoadingOverlay
+                isOpen={isGenerating}
+                title={`Mengunduh ${selectedTemplate?.name || 'Dokumen'}`}
+                type="download"
+                badge="PNG"
+            />
+            <LoadingOverlay
+                isOpen={isSavingToDb}
+                title="Menyimpan ke Database"
+                type="save"
+                badge="History"
+            />
+
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 {/* Header */}
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
