@@ -31,6 +31,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Merge Word Document routes
     Route::get('documents/merge', [DocumentController::class, 'merge'])->name('documents.merge');
     Route::post('documents/merge/download', [DocumentController::class, 'downloadMergeDocx'])->name('documents.merge.download');
+
+    // Template Field Configuration routes
+    Route::get('templates/fields', [DocumentController::class, 'templateFieldsIndex'])->name('templates.fields.index');
+    Route::put('templates/fields/{field}', [DocumentController::class, 'updateTemplateField'])->name('templates.fields.update');
+    Route::post('templates/fields/bulk-update', [DocumentController::class, 'bulkUpdateTemplateFields'])->name('templates.fields.bulk-update');
+    Route::post('templates/fields/reset-defaults', [DocumentController::class, 'resetTemplateFields'])->name('templates.fields.reset-defaults');
 });
 
 require __DIR__.'/settings.php';

@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
     Card,
     CardContent,
@@ -36,6 +37,7 @@ interface TemplateField {
     start_x: number;
     start_y: number;
     max_chars: number;
+    default_value?: string | null;
     font_style?: string;
 }
 
@@ -61,21 +63,21 @@ const DEFAULT_COMBINED_DATA = {
     nomor_mesin: 'JBB11',
     warna: 'HITAM',
 
-    // STNK Specific
+    // STNK Exclusive
     stnk_alamat1: 'DSN. TEMPAT RW01/02 DS. TEMPAT',
-    stnk_alamat2: 'KEC. TEMPAT SBY',
+    stnk_alamat2: 'MOJOAGUNG JOMBANG',
     stnk_merk: 'HONDA',
     stnk_type: 'NF11B21 MT',
-    stnk_tahun_pembuatan: '2010',
-    stnk_silinder: '00100 CC',
-    stnk_tahun_regristasi: '2010',
-    stnk_nomor_bpkb: 'B',
-    stnk_lokasi_samsat: 'SURABAYA,',
+    stnk_tahun_pembuatan: '2013',
+    stnk_silinder: '108',
+    stnk_tahun_regristasi: '2014',
+    stnk_nomor_bpkb: 'L-0402123',
+    stnk_tanggal_stnk: '20-08-2015',
+    stnk_lokasi_samsat: 'SAMSAT JOMBANG',
     stnk_provinsi_samsat: 'JAWA TIMUR',
     stnk_tanggal_bayar: '20-08-2010',
-    stnk_tanggal_stnk: '20-08-2015',
 
-    // PAJAK Specific
+    // PAJAK Exclusive
     pajak_alamat1: 'NAMA TEMPAT',
     pajak_alamat2: 'RW01/02 / SBY / DS. TEMPAT',
     pajak_alamat3: 'MOJOAGUNG',
@@ -92,8 +94,50 @@ export default function CreateCombinedPage({
     stnkTemplate,
     pajakTemplate,
 }: CreateCombinedProps) {
-    const [formData, setFormData] = useState<Record<string, string>>(
-        DEFAULT_COMBINED_DATA,
+    const getInitialCombinedData = () => {
+        const data = { ...DEFAULT_COMBINED_DATA };
+        stnkTemplate?.fields?.forEach((f) => {
+            if (f.default_value !== undefined && f.default_value !== null) {
+                if (f.field_name === 'nopol') data.nopol = f.default_value;
+                else if (f.field_name === 'nama-pemilik') data.nama_pemilik = f.default_value;
+                else if (f.field_name === 'jenis') data.jenis = f.default_value;
+                else if (f.field_name === 'model') data.model = f.default_value;
+                else if (f.field_name === 'nomor-rangka') data.nomor_rangka = f.default_value;
+                else if (f.field_name === 'nomor-mesin') data.nomor_mesin = f.default_value;
+                else if (f.field_name === 'warna') data.warna = f.default_value;
+                else if (f.field_name === 'alamat1') data.stnk_alamat1 = f.default_value;
+                else if (f.field_name === 'alamat2') data.stnk_alamat2 = f.default_value;
+                else if (f.field_name === 'merk') data.stnk_merk = f.default_value;
+                else if (f.field_name === 'type') data.stnk_type = f.default_value;
+                else if (f.field_name === 'tahun-pembuatan') data.stnk_tahun_pembuatan = f.default_value;
+                else if (f.field_name === 'silinder') data.stnk_silinder = f.default_value;
+                else if (f.field_name === 'tahun-regristasi') data.stnk_tahun_regristasi = f.default_value;
+                else if (f.field_name === 'nomor-bpkb') data.stnk_nomor_bpkb = f.default_value;
+                else if (f.field_name === 'tanggal-stnk') data.stnk_tanggal_stnk = f.default_value;
+                else if (f.field_name === 'lokasi-samsat') data.stnk_lokasi_samsat = f.default_value;
+                else if (f.field_name === 'provinsi-samsat') data.stnk_provinsi_samsat = f.default_value;
+                else if (f.field_name === 'tanggal-bayar') data.stnk_tanggal_bayar = f.default_value;
+            }
+        });
+        pajakTemplate?.fields?.forEach((f) => {
+            if (f.default_value !== undefined && f.default_value !== null) {
+                if (f.field_name === 'alamat1') data.pajak_alamat1 = f.default_value;
+                else if (f.field_name === 'alamat2') data.pajak_alamat2 = f.default_value;
+                else if (f.field_name === 'alamat3') data.pajak_alamat3 = f.default_value;
+                else if (f.field_name === 'merk') data.pajak_merk = f.default_value;
+                else if (f.field_name === 'tahun-cc') data.pajak_tahun_cc = f.default_value;
+                else if (f.field_name === 'tanggal-faktur') data.pajak_tanggal_faktur = f.default_value;
+                else if (f.field_name === 'tanggal-pajak') data.pajak_tanggal_pajak = f.default_value;
+                else if (f.field_name === 'nopol-lama') data.pajak_nopol_lama = f.default_value;
+                else if (f.field_name === 'tanggal-bayar') data.pajak_tanggal_bayar = f.default_value;
+                else if (f.field_name === 'tahun-bayar') data.pajak_tahun_bayar = f.default_value;
+            }
+        });
+        return data;
+    };
+
+    const [formData, setFormData] = useState<Record<string, string>>(() =>
+        getInitialCombinedData(),
     );
     const [stnkPreview, setStnkPreview] = useState<string | null>(null);
     const [pajakPreview, setPajakPreview] = useState<string | null>(null);
@@ -115,8 +159,28 @@ export default function CreateCombinedPage({
     };
 
     const handleResetSample = () => {
-        setFormData(DEFAULT_COMBINED_DATA);
-        toast.info('Formulir direset ke data sampel gabungan default.');
+        setFormData(getInitialCombinedData());
+        toast.info('Formulir direset ke data konfigurasi default.');
+    };
+
+    // DB max_chars lookup helpers
+    const getStnkMax = (fieldName: string, fallback = 50) => {
+        const field = stnkTemplate?.fields?.find((f) => f.field_name === fieldName);
+        return field?.max_chars ?? fallback;
+    };
+
+    const getPajakMax = (fieldName: string, fallback = 50) => {
+        const field = pajakTemplate?.fields?.find((f) => f.field_name === fieldName);
+        return field?.max_chars ?? fallback;
+    };
+
+    const getSharedMax = (stnkFieldName: string, pajakFieldName: string, fallback = 50) => {
+        const stnkField = stnkTemplate?.fields?.find((f) => f.field_name === stnkFieldName);
+        const pajakField = pajakTemplate?.fields?.find((f) => f.field_name === pajakFieldName);
+        if (stnkField && pajakField) {
+            return Math.min(stnkField.max_chars, pajakField.max_chars);
+        }
+        return stnkField?.max_chars ?? pajakField?.max_chars ?? fallback;
     };
 
     // Helper: Split unified form data into STNK and PAJAK payloads
@@ -242,7 +306,7 @@ export default function CreateCombinedPage({
             setPreviewStage('Selesai! Live preview STNK & PAJAK siap.');
             toast.success('Preview STNK & PAJAK berhasil di-render di RAM!');
         } catch (err: any) {
-            toast.error(err.message || 'Gagal menghubungi API preview.');
+            toast.error(err.message || 'Gagal merender live preview.');
         } finally {
             setIsPreviewLoading(false);
         }
@@ -492,8 +556,8 @@ export default function CreateCombinedPage({
                                         Preview PAJAK (RAM)
                                     </CardTitle>
                                     <CardDescription className="text-xs">
-                                        Color Graded (Curve -20%, Brightness
-                                        -15, Contrast +40) &bull; Template #
+                                        Color Graded (Multi-Font: Bold, Reg-U,
+                                        Reg-B) &bull; Template #
                                         {pajakTemplate?.id}
                                     </CardDescription>
                                 </div>
@@ -562,193 +626,235 @@ export default function CreateCombinedPage({
                         <CardContent>
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                                 {/* Nopol */}
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between">
-                                        <Label
-                                            htmlFor="nopol"
-                                            className="text-xs font-semibold"
-                                        >
-                                            Nomor Polisi (Nopol)
-                                        </Label>
-                                        <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400">
-                                            STNK & PAJAK (Bold)
-                                        </span>
-                                    </div>
-                                    <Input
-                                        id="nopol"
-                                        value={formData.nopol}
-                                        maxLength={12}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'nopol',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono font-bold uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getSharedMax('nopol', 'nopol', 12);
+                                    const val = formData.nopol || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="nopol"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Nomor Polisi (Nopol)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
+                                                    {val.length}/{max} (Bold)
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="nopol"
+                                                value={formData.nopol}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'nopol',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono font-bold uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Nama Pemilik */}
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between">
-                                        <Label
-                                            htmlFor="nama_pemilik"
-                                            className="text-xs font-semibold"
-                                        >
-                                            Nama Pemilik
-                                        </Label>
-                                        <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400">
-                                            STNK & PAJAK (Reg-U)
-                                        </span>
-                                    </div>
-                                    <Input
-                                        id="nama_pemilik"
-                                        value={formData.nama_pemilik}
-                                        maxLength={30}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'nama_pemilik',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getSharedMax('nama-pemilik', 'nama-pemilik', 50);
+                                    const val = formData.nama_pemilik || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="nama_pemilik"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Nama Pemilik
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
+                                                    {val.length}/{max} (Reg-U)
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="nama_pemilik"
+                                                value={formData.nama_pemilik}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'nama_pemilik',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Jenis */}
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between">
-                                        <Label
-                                            htmlFor="jenis"
-                                            className="text-xs font-semibold"
-                                        >
-                                            Jenis Kendaraan
-                                        </Label>
-                                        <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400">
-                                            STNK & PAJAK (Reg-B)
-                                        </span>
-                                    </div>
-                                    <Input
-                                        id="jenis"
-                                        value={formData.jenis}
-                                        maxLength={20}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'jenis',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getSharedMax('jenis', 'jenis', 20);
+                                    const val = formData.jenis || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="jenis"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Jenis Kendaraan
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
+                                                    {val.length}/{max} (Reg-B)
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="jenis"
+                                                value={formData.jenis}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'jenis',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Model */}
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between">
-                                        <Label
-                                            htmlFor="model"
-                                            className="text-xs font-semibold"
-                                        >
-                                            Model
-                                        </Label>
-                                        <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400">
-                                            STNK & PAJAK (Reg-B)
-                                        </span>
-                                    </div>
-                                    <Input
-                                        id="model"
-                                        value={formData.model}
-                                        maxLength={20}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'model',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getSharedMax('model', 'model', 20);
+                                    const val = formData.model || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="model"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Model
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
+                                                    {val.length}/{max} (Reg-B)
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="model"
+                                                value={formData.model}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'model',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Nomor Rangka */}
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between">
-                                        <Label
-                                            htmlFor="nomor_rangka"
-                                            className="text-xs font-semibold"
-                                        >
-                                            Nomor Rangka
-                                        </Label>
-                                        <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400">
-                                            STNK & PAJAK (Reg-B)
-                                        </span>
-                                    </div>
-                                    <Input
-                                        id="nomor_rangka"
-                                        value={formData.nomor_rangka}
-                                        maxLength={20}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'nomor_rangka',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getSharedMax('nomor-rangka', 'nomor-rangka', 20);
+                                    const val = formData.nomor_rangka || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="nomor_rangka"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Nomor Rangka
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
+                                                    {val.length}/{max} (Reg-B)
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="nomor_rangka"
+                                                value={formData.nomor_rangka}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'nomor_rangka',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Nomor Mesin */}
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between">
-                                        <Label
-                                            htmlFor="nomor_mesin"
-                                            className="text-xs font-semibold"
-                                        >
-                                            Nomor Mesin
-                                        </Label>
-                                        <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400">
-                                            STNK & PAJAK (Reg-B)
-                                        </span>
-                                    </div>
-                                    <Input
-                                        id="nomor_mesin"
-                                        value={formData.nomor_mesin}
-                                        maxLength={20}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'nomor_mesin',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getSharedMax('nomor-mesin', 'nomor-mesin', 20);
+                                    const val = formData.nomor_mesin || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="nomor_mesin"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Nomor Mesin
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
+                                                    {val.length}/{max} (Reg-B)
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="nomor_mesin"
+                                                value={formData.nomor_mesin}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'nomor_mesin',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Warna */}
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between">
-                                        <Label
-                                            htmlFor="warna"
-                                            className="text-xs font-semibold"
-                                        >
-                                            Warna
-                                        </Label>
-                                        <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400">
-                                            STNK & PAJAK (Reg-B)
-                                        </span>
-                                    </div>
-                                    <Input
-                                        id="warna"
-                                        value={formData.warna}
-                                        maxLength={15}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'warna',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getSharedMax('warna', 'warna', 15);
+                                    const val = formData.warna || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="warna"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Warna
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
+                                                    {val.length}/{max} (Reg-B)
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="warna"
+                                                value={formData.warna}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'warna',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </CardContent>
                     </Card>
@@ -783,268 +889,400 @@ export default function CreateCombinedPage({
                         <CardContent>
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                                 {/* Alamat 1 */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="stnk_alamat1"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Alamat 1 (Dusun / Desa)
-                                    </Label>
-                                    <Input
-                                        id="stnk_alamat1"
-                                        value={formData.stnk_alamat1}
-                                        maxLength={35}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'stnk_alamat1',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getStnkMax('alamat1', 50);
+                                    const val = formData.stnk_alamat1 || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="stnk_alamat1"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Alamat 1 (Dusun / Desa)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="stnk_alamat1"
+                                                value={formData.stnk_alamat1}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'stnk_alamat1',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Alamat 2 */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="stnk_alamat2"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Alamat 2 (Kecamatan / Kota)
-                                    </Label>
-                                    <Input
-                                        id="stnk_alamat2"
-                                        value={formData.stnk_alamat2}
-                                        maxLength={30}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'stnk_alamat2',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getStnkMax('alamat2', 50);
+                                    const val = formData.stnk_alamat2 || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="stnk_alamat2"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Alamat 2 (Kecamatan / Kota)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="stnk_alamat2"
+                                                value={formData.stnk_alamat2}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'stnk_alamat2',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Merk */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="stnk_merk"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Merk
-                                    </Label>
-                                    <Input
-                                        id="stnk_merk"
-                                        value={formData.stnk_merk}
-                                        maxLength={20}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'stnk_merk',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getStnkMax('merk', 20);
+                                    const val = formData.stnk_merk || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="stnk_merk"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Merk
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="stnk_merk"
+                                                value={formData.stnk_merk}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'stnk_merk',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Type */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="stnk_type"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Type
-                                    </Label>
-                                    <Input
-                                        id="stnk_type"
-                                        value={formData.stnk_type}
-                                        maxLength={20}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'stnk_type',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getStnkMax('type', 20);
+                                    const val = formData.stnk_type || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="stnk_type"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Type
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="stnk_type"
+                                                value={formData.stnk_type}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'stnk_type',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Tahun Pembuatan */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="stnk_tahun_pembuatan"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Tahun Pembuatan
-                                    </Label>
-                                    <Input
-                                        id="stnk_tahun_pembuatan"
-                                        value={formData.stnk_tahun_pembuatan}
-                                        maxLength={10}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'stnk_tahun_pembuatan',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getStnkMax('tahun-pembuatan', 10);
+                                    const val = formData.stnk_tahun_pembuatan || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="stnk_tahun_pembuatan"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Tahun Pembuatan
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="stnk_tahun_pembuatan"
+                                                value={formData.stnk_tahun_pembuatan}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'stnk_tahun_pembuatan',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Silinder */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="stnk_silinder"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Silinder (Isi Silinder)
-                                    </Label>
-                                    <Input
-                                        id="stnk_silinder"
-                                        value={formData.stnk_silinder}
-                                        maxLength={12}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'stnk_silinder',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getStnkMax('silinder', 12);
+                                    const val = formData.stnk_silinder || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="stnk_silinder"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Silinder (Isi Silinder)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="stnk_silinder"
+                                                value={formData.stnk_silinder}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'stnk_silinder',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Tahun Registrasi */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="stnk_tahun_regristasi"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Tahun Registrasi
-                                    </Label>
-                                    <Input
-                                        id="stnk_tahun_regristasi"
-                                        value={formData.stnk_tahun_regristasi}
-                                        maxLength={6}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'stnk_tahun_regristasi',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getStnkMax('tahun-regristasi', 6);
+                                    const val = formData.stnk_tahun_regristasi || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="stnk_tahun_regristasi"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Tahun Registrasi
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="stnk_tahun_regristasi"
+                                                value={formData.stnk_tahun_regristasi}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'stnk_tahun_regristasi',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Nomor BPKB */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="stnk_nomor_bpkb"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Nomor BPKB
-                                    </Label>
-                                    <Input
-                                        id="stnk_nomor_bpkb"
-                                        value={formData.stnk_nomor_bpkb}
-                                        maxLength={20}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'stnk_nomor_bpkb',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getStnkMax('nomor-bpkb', 20);
+                                    const val = formData.stnk_nomor_bpkb || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="stnk_nomor_bpkb"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Nomor BPKB
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="stnk_nomor_bpkb"
+                                                value={formData.stnk_nomor_bpkb}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'stnk_nomor_bpkb',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Lokasi Samsat */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="stnk_lokasi_samsat"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Lokasi Samsat
-                                    </Label>
-                                    <Input
-                                        id="stnk_lokasi_samsat"
-                                        value={formData.stnk_lokasi_samsat}
-                                        maxLength={20}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'stnk_lokasi_samsat',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getStnkMax('lokasi-samsat', 20);
+                                    const val = formData.stnk_lokasi_samsat || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="stnk_lokasi_samsat"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Lokasi Samsat
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="stnk_lokasi_samsat"
+                                                value={formData.stnk_lokasi_samsat}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'stnk_lokasi_samsat',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Provinsi Samsat */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="stnk_provinsi_samsat"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Provinsi Samsat
-                                    </Label>
-                                    <Input
-                                        id="stnk_provinsi_samsat"
-                                        value={formData.stnk_provinsi_samsat}
-                                        maxLength={20}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'stnk_provinsi_samsat',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getStnkMax('provinsi-samsat', 20);
+                                    const val = formData.stnk_provinsi_samsat || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="stnk_provinsi_samsat"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Provinsi Samsat
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="stnk_provinsi_samsat"
+                                                value={formData.stnk_provinsi_samsat}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'stnk_provinsi_samsat',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Tanggal Bayar STNK */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="stnk_tanggal_bayar"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Tanggal Bayar (Header STNK)
-                                    </Label>
-                                    <Input
-                                        id="stnk_tanggal_bayar"
-                                        value={formData.stnk_tanggal_bayar}
-                                        maxLength={12}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'stnk_tanggal_bayar',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getStnkMax('tanggal-bayar', 12);
+                                    const val = formData.stnk_tanggal_bayar || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="stnk_tanggal_bayar"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Tanggal Bayar (Header STNK)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="stnk_tanggal_bayar"
+                                                value={formData.stnk_tanggal_bayar}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'stnk_tanggal_bayar',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Tanggal STNK */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="stnk_tanggal_stnk"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Tanggal STNK (Masa Berlaku)
-                                    </Label>
-                                    <Input
-                                        id="stnk_tanggal_stnk"
-                                        value={formData.stnk_tanggal_stnk}
-                                        maxLength={12}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'stnk_tanggal_stnk',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getStnkMax('tanggal-stnk', 12);
+                                    const val = formData.stnk_tanggal_stnk || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="stnk_tanggal_stnk"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Tanggal STNK (Masa Berlaku)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="stnk_tanggal_stnk"
+                                                value={formData.stnk_tanggal_stnk}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'stnk_tanggal_stnk',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs"
+                                            />
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </CardContent>
                     </Card>
@@ -1079,224 +1317,334 @@ export default function CreateCombinedPage({
                         <CardContent>
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                                 {/* Alamat 1 */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="pajak_alamat1"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Alamat 1 (Reg-U)
-                                    </Label>
-                                    <Input
-                                        id="pajak_alamat1"
-                                        value={formData.pajak_alamat1}
-                                        maxLength={35}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'pajak_alamat1',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getPajakMax('alamat1', 50);
+                                    const val = formData.pajak_alamat1 || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="pajak_alamat1"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Alamat 1 (Reg-U)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="pajak_alamat1"
+                                                value={formData.pajak_alamat1}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'pajak_alamat1',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Alamat 2 */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="pajak_alamat2"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Alamat 2 (Reg-U)
-                                    </Label>
-                                    <Input
-                                        id="pajak_alamat2"
-                                        value={formData.pajak_alamat2}
-                                        maxLength={30}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'pajak_alamat2',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getPajakMax('alamat2', 50);
+                                    const val = formData.pajak_alamat2 || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="pajak_alamat2"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Alamat 2 (Reg-U)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="pajak_alamat2"
+                                                value={formData.pajak_alamat2}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'pajak_alamat2',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Alamat 3 */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="pajak_alamat3"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Alamat 3 (Reg-U)
-                                    </Label>
-                                    <Input
-                                        id="pajak_alamat3"
-                                        value={formData.pajak_alamat3}
-                                        maxLength={30}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'pajak_alamat3',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getPajakMax('alamat3', 50);
+                                    const val = formData.pajak_alamat3 || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="pajak_alamat3"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Alamat 3 (Reg-U)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="pajak_alamat3"
+                                                value={formData.pajak_alamat3}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'pajak_alamat3',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Merk */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="pajak_merk"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Merk / Type (Reg-B)
-                                    </Label>
-                                    <Input
-                                        id="pajak_merk"
-                                        value={formData.pajak_merk}
-                                        maxLength={25}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'pajak_merk',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getPajakMax('merk', 40);
+                                    const val = formData.pajak_merk || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="pajak_merk"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Merk / Type (Reg-B)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="pajak_merk"
+                                                value={formData.pajak_merk}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'pajak_merk',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Tahun / CC */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="pajak_tahun_cc"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Tahun / CC (Reg-B)
-                                    </Label>
-                                    <Input
-                                        id="pajak_tahun_cc"
-                                        value={formData.pajak_tahun_cc}
-                                        maxLength={12}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'pajak_tahun_cc',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs uppercase"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getPajakMax('tahun-cc', 12);
+                                    const val = formData.pajak_tahun_cc || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="pajak_tahun_cc"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Tahun / CC (Reg-B)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="pajak_tahun_cc"
+                                                value={formData.pajak_tahun_cc}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'pajak_tahun_cc',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs uppercase"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Tanggal Faktur */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="pajak_tanggal_faktur"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Tanggal Faktur (Reg-B)
-                                    </Label>
-                                    <Input
-                                        id="pajak_tanggal_faktur"
-                                        value={formData.pajak_tanggal_faktur}
-                                        maxLength={20}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'pajak_tanggal_faktur',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getPajakMax('tanggal-faktur', 20);
+                                    const val = formData.pajak_tanggal_faktur || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="pajak_tanggal_faktur"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Tanggal Faktur (Reg-B)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="pajak_tanggal_faktur"
+                                                value={formData.pajak_tanggal_faktur}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'pajak_tanggal_faktur',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Tanggal Pajak */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="pajak_tanggal_pajak"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Tanggal Pajak (Bold)
-                                    </Label>
-                                    <Input
-                                        id="pajak_tanggal_pajak"
-                                        value={formData.pajak_tanggal_pajak}
-                                        maxLength={12}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'pajak_tanggal_pajak',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs font-bold"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getPajakMax('tanggal-pajak', 12);
+                                    const val = formData.pajak_tanggal_pajak || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="pajak_tanggal_pajak"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Tanggal Pajak (Bold)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-purple-600 dark:text-purple-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="pajak_tanggal_pajak"
+                                                value={formData.pajak_tanggal_pajak}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'pajak_tanggal_pajak',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs font-bold"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Nopol Lama */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="pajak_nopol_lama"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Nopol Lama (Reg-B)
-                                    </Label>
-                                    <Input
-                                        id="pajak_nopol_lama"
-                                        value={formData.pajak_nopol_lama}
-                                        maxLength={12}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'pajak_nopol_lama',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getPajakMax('nopol-lama', 12);
+                                    const val = formData.pajak_nopol_lama || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="pajak_nopol_lama"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Nopol Lama (Reg-B)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="pajak_nopol_lama"
+                                                value={formData.pajak_nopol_lama}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'pajak_nopol_lama',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Tanggal Bayar PAJAK */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="pajak_tanggal_bayar"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Tanggal Bayar Pajak (Reg-B)
-                                    </Label>
-                                    <Input
-                                        id="pajak_tanggal_bayar"
-                                        value={formData.pajak_tanggal_bayar}
-                                        maxLength={12}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'pajak_tanggal_bayar',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getPajakMax('tanggal-bayar', 12);
+                                    const val = formData.pajak_tanggal_bayar || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="pajak_tanggal_bayar"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Tanggal Bayar Pajak (Reg-B)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="pajak_tanggal_bayar"
+                                                value={formData.pajak_tanggal_bayar}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'pajak_tanggal_bayar',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs"
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Tahun Bayar */}
-                                <div className="space-y-1.5">
-                                    <Label
-                                        htmlFor="pajak_tahun_bayar"
-                                        className="text-xs font-semibold"
-                                    >
-                                        Tahun Bayar (Reg-B)
-                                    </Label>
-                                    <Input
-                                        id="pajak_tahun_bayar"
-                                        value={formData.pajak_tahun_bayar}
-                                        maxLength={12}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'pajak_tahun_bayar',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="font-mono text-xs"
-                                    />
-                                </div>
+                                {(() => {
+                                    const max = getPajakMax('tahun-bayar', 12);
+                                    const val = formData.pajak_tahun_bayar || '';
+                                    return (
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label
+                                                    htmlFor="pajak_tahun_bayar"
+                                                    className="text-xs font-semibold"
+                                                >
+                                                    Tahun Bayar (Reg-B)
+                                                </Label>
+                                                <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
+                                                    {val.length}/{max}
+                                                </span>
+                                            </div>
+                                            <Input
+                                                id="pajak_tahun_bayar"
+                                                value={formData.pajak_tahun_bayar}
+                                                maxLength={max}
+                                                onChange={(e) =>
+                                                    handleInputChange(
+                                                        'pajak_tahun_bayar',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="font-mono text-xs"
+                                            />
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </CardContent>
                     </Card>

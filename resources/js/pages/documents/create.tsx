@@ -38,10 +38,11 @@ interface TemplateField {
     start_x: number;
     start_y: number;
     max_chars: number;
+    default_value?: string | null;
     font_style?: string;
 }
 
-interface Template {
+interface TemplateItem {
     id: number;
     name: string;
     dummy_bg_path: string;
@@ -49,28 +50,31 @@ interface Template {
 }
 
 interface CreateDocumentProps {
-    templates: Template[];
-    selectedTemplate: Template;
+    templates?: TemplateItem[];
+    selectedTemplate?: TemplateItem;
 }
 
 const STNK_DEFAULTS: Record<string, string> = {
     nopol: 'S 1234 WL',
     'nama-pemilik': 'NAMA LENGKAP',
     alamat1: 'DSN. TEMPAT RW01/02 DS. TEMPAT',
-    alamat2: 'KEC. TEMPAT SBY',
+    alamat2: 'MOJOAGUNG JOMBANG',
     merk: 'HONDA',
     type: 'NF11B21 MT',
     jenis: 'SEPEDA MOTOR',
     model: 'SEPEDA MOTOR',
-    'tahun-pembuatan': '2010',
-    silinder: '00100 CC',
+    'tahun-pembuatan': '2013',
+    silinder: '108',
+    'warna-tnkb': 'HITAM',
     'nomor-rangka': 'MH1JBB11',
     'nomor-mesin': 'JBB11',
     warna: 'HITAM',
-    'tahun-regristasi': '2010',
-    'nomor-bpkb': 'B',
+    'bahan-bakar': 'BENSIN',
+    'tahun-regristasi': '2014',
+    'nomor-bpkb': 'L-0402123',
+    'nomor-urut': '000000000000000000',
     'tanggal-stnk': '20-08-2015',
-    'lokasi-samsat': 'SURABAYA,',
+    'lokasi-samsat': 'SAMSAT JOMBANG',
     'provinsi-samsat': 'JAWA TIMUR',
     'tanggal-bayar': '20-08-2010',
 };
@@ -95,9 +99,23 @@ const PAJAK_DEFAULTS: Record<string, string> = {
     'tahun-bayar': '14',
 };
 
-function getDefaultFormData(templateName?: string): Record<string, string> {
-    const isPajak = templateName?.toUpperCase() === 'PAJAK';
-    return isPajak ? { ...PAJAK_DEFAULTS } : { ...STNK_DEFAULTS };
+function getDefaultFormData(selectedTemplate?: TemplateItem): Record<string, string> {
+    if (!selectedTemplate) return {};
+    const fallback =
+        selectedTemplate.name?.toUpperCase() === 'PAJAK'
+            ? { ...PAJAK_DEFAULTS }
+            : { ...STNK_DEFAULTS };
+
+    const dynamicDefaults: Record<string, string> = {};
+    if (selectedTemplate.fields && selectedTemplate.fields.length > 0) {
+        selectedTemplate.fields.forEach((field) => {
+            if (field.default_value !== undefined && field.default_value !== null) {
+                dynamicDefaults[field.field_name] = field.default_value;
+            }
+        });
+    }
+
+    return { ...fallback, ...dynamicDefaults };
 }
 
 export default function CreateDocument({
@@ -105,11 +123,11 @@ export default function CreateDocument({
     selectedTemplate,
 }: CreateDocumentProps) {
     const [formData, setFormData] = useState<Record<string, string>>(() =>
-        getDefaultFormData(selectedTemplate?.name),
+        getDefaultFormData(selectedTemplate),
     );
 
     useEffect(() => {
-        setFormData(getDefaultFormData(selectedTemplate?.name));
+        setFormData(getDefaultFormData(selectedTemplate));
         setPreviewImage(null);
     }, [selectedTemplate?.id]);
 
@@ -275,7 +293,7 @@ export default function CreateDocument({
 
     // Fill sample dummy data for quick testing
     const handleFillSampleData = () => {
-        setFormData(getDefaultFormData(selectedTemplate?.name));
+        setFormData(getDefaultFormData(selectedTemplate));
         toast.info(`Sample data ${selectedTemplate?.name || ''} diisi.`);
     };
 

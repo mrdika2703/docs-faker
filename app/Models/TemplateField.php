@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property int $start_x
  * @property int $start_y
  * @property int $max_chars
+ * @property string|null $default_value
  * @property string $font_style
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -28,6 +29,7 @@ class TemplateField extends Model
         'start_x',
         'start_y',
         'max_chars',
+        'default_value',
         'font_style',
     ];
 

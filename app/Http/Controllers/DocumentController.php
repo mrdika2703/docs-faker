@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DocumentHistory;
 use App\Models\Template;
+use App\Models\TemplateField;
 use App\Services\DocumentImageService;
 use App\Services\DummyAssetGenerator;
 use App\Services\WordDocumentService;
@@ -598,5 +599,90 @@ class DocumentController extends Controller
             'stnk' => $stnkData,
             'pajak' => $pajakData,
         ];
+    }
+
+    /**
+     * Display template fields configuration management page.
+     */
+    public function templateFieldsIndex(Request $request): Response
+    {
+        $templates = Template::with(['fields' => function ($query) {
+            $query->orderBy('id');
+        }])->orderBy('id')->get();
+
+        if ($templates->isEmpty()) {
+            $seeder = new DocumentTemplateSeeder;
+            $seeder->run();
+            $templates = Template::with(['fields' => function ($query) {
+                $query->orderBy('id');
+            }])->orderBy('id')->get();
+        }
+
+        return Inertia::render('documents/template-fields', [
+            'templates' => $templates,
+        ]);
+    }
+
+    /**
+     * Update a single template field's configuration.
+     */
+    public function updateTemplateField(Request $request, TemplateField $field): JsonResponse
+    {
+        $validated = $request->validate([
+            'default_value' => 'nullable|string|max:255',
+            'max_chars' => 'required|integer|min:1|max:500',
+        ]);
+
+        $field->update($validated);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Field '{$field->field_name}' berhasil diperbarui.",
+            'field' => $field,
+        ]);
+    }
+
+    /**
+     * Bulk update multiple template fields.
+     */
+    public function bulkUpdateTemplateFields(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'fields' => 'required|array',
+            'fields.*.id' => 'required|exists:template_fields,id',
+            'fields.*.default_value' => 'nullable|string|max:255',
+            'fields.*.max_chars' => 'required|integer|min:1|max:500',
+        ]);
+
+        $updatedCount = 0;
+        foreach ($validated['fields'] as $fieldData) {
+            $field = TemplateField::find($fieldData['id']);
+            if ($field) {
+                $field->update([
+                    'default_value' => $fieldData['default_value'] ?? null,
+                    'max_chars' => $fieldData['max_chars'],
+                ]);
+                $updatedCount++;
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Berhasil memperbarui {$updatedCount} konfigurasi field.",
+        ]);
+    }
+
+    /**
+     * Reset template fields to default seeder values.
+     */
+    public function resetTemplateFields(Request $request): JsonResponse
+    {
+        $seeder = new DocumentTemplateSeeder;
+        $seeder->run();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Konfigurasi template field berhasil di-reset ke nilai default bawaan.',
+        ]);
     }
 }
