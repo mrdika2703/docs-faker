@@ -170,7 +170,7 @@ export default function CreateDocument({
                 ?.getAttribute('content') || '';
 
             setPreviewProgress(70);
-            setPreviewStage(`Merender ${selectedTemplate.name} (Multi-Font & Color Grading)...`);
+            setPreviewStage(`Merender pratinjau ${selectedTemplate.name}...`);
 
             const res = await fetch('/documents/preview', {
                 method: 'POST',
@@ -189,9 +189,9 @@ export default function CreateDocument({
             if (res.ok && data.status === 'success') {
                 setPreviewImage(data.preview_url);
                 setPreviewProgress(100);
-                setPreviewStage('Preview siap ditampilkan!');
+                setPreviewStage('Pratinjau siap ditampilkan!');
                 toast.success(
-                    'Live preview rendered in RAM with multi-font compositing!',
+                    'Pratinjau dokumen berhasil dimuat!',
                 );
             } else {
                 toast.error(data.message || 'Failed to generate preview.');
@@ -251,7 +251,7 @@ export default function CreateDocument({
                 ?.getAttribute('content') || '';
 
             setGenerateProgress(70);
-            setGenerateStage(`Merender ${selectedTemplate.name} resolusi penuh di RAM...`);
+            setGenerateStage(`Membuat file ${selectedTemplate.name}...`);
 
             const res = await fetch('/documents/generate', {
                 method: 'POST',
@@ -400,8 +400,7 @@ export default function CreateDocument({
                                 )}
                             </div>
                             <p className="text-sm text-neutral-500">
-                                Composite individual letter image characters
-                                onto template canvas in RAM.
+                                Isi data formulir untuk menghasilkan dokumen sesuai template.
                             </p>
                         </div>
                     </div>
@@ -432,11 +431,10 @@ export default function CreateDocument({
                         <CardHeader className="flex flex-row items-center justify-between pb-3">
                             <div>
                                 <CardTitle className="text-base">
-                                    Document Live Preview
+                                    Pratinjau Dokumen
                                 </CardTitle>
                                 <CardDescription className="text-xs">
-                                    Rendered in RAM with multi-font compositing
-                                    (800x600)
+                                    Tampilan hasil dokumen sebelum disimpan atau diunduh
                                 </CardDescription>
                             </div>
                             <Button
@@ -446,7 +444,7 @@ export default function CreateDocument({
                                 onClick={() => setRawBgModalOpen(true)}
                             >
                                 <ImageIcon className="size-3.5" />
-                                Raw Background
+                                Latar Template
                             </Button>
                         </CardHeader>
 
@@ -456,8 +454,7 @@ export default function CreateDocument({
                                     <div className="flex flex-col items-center gap-3">
                                         <Spinner className="size-8 text-neutral-700 dark:text-neutral-200" />
                                         <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                                            Compositing letter sets onto
-                                            background in RAM...
+                                            Memuat pratinjau dokumen...
                                         </span>
                                     </div>
                                 ) : previewImage ? (
@@ -468,7 +465,7 @@ export default function CreateDocument({
                                             className="max-h-[500px] max-w-full rounded-lg border border-neutral-300 object-contain shadow-md dark:border-neutral-700"
                                         />
                                         <div className="absolute top-2 right-2 rounded bg-emerald-600/90 px-2 py-0.5 text-[10px] font-semibold text-white opacity-25 shadow backdrop-blur">
-                                            Live RAM Composite
+                                            Pratinjau
                                         </div>
                                     </div>
                                 ) : selectedTemplate ? (
@@ -660,7 +657,7 @@ export default function CreateDocument({
                                     ) : (
                                         <Eye className="size-4" />
                                     )}
-                                    Preview (RAM)
+                                    Preview Dokumen
                                 </Button>
 
                                 <Button
@@ -697,7 +694,7 @@ export default function CreateDocument({
                                     ) : (
                                         <Download className="size-4" />
                                     )}
-                                    Save & Download
+                                    Simpan & Unduh
                                 </Button>
                             </div>
                         </CardContent>
@@ -710,13 +707,10 @@ export default function CreateDocument({
                 <DialogContent className="max-w-4xl">
                     <DialogHeader>
                         <DialogTitle>
-                            Raw Template Background: {selectedTemplate?.name}
+                            Latar Template: {selectedTemplate?.name}
                         </DialogTitle>
                         <DialogDescription>
-                            Base 800x600 template canvas loaded from{' '}
-                            <code className="font-mono">
-                                {selectedTemplate?.dummy_bg_path}
-                            </code>
+                            Latar dasar template dokumen {selectedTemplate?.name}.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex min-h-[350px] items-center justify-center rounded-lg border border-sidebar-border bg-neutral-100 p-4 dark:bg-neutral-900">

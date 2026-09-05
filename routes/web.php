@@ -31,12 +31,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Merge Word Document routes
     Route::get('documents/merge', [DocumentController::class, 'merge'])->name('documents.merge');
     Route::post('documents/merge/download', [DocumentController::class, 'downloadMergeDocx'])->name('documents.merge.download');
+    Route::post('documents/merge/prepare', [DocumentController::class, 'prepareMergeJob'])->name('documents.merge.prepare');
+    Route::get('documents/merge/status/{jobId}', [DocumentController::class, 'statusMergeJob'])->name('documents.merge.status');
+    Route::get('documents/merge/download/{jobId}', [DocumentController::class, 'downloadMergeJob'])->name('documents.merge.job-download');
 
-    // Template Field Configuration routes
-    Route::get('templates/fields', [DocumentController::class, 'templateFieldsIndex'])->name('templates.fields.index');
-    Route::put('templates/fields/{field}', [DocumentController::class, 'updateTemplateField'])->name('templates.fields.update');
-    Route::post('templates/fields/bulk-update', [DocumentController::class, 'bulkUpdateTemplateFields'])->name('templates.fields.bulk-update');
-    Route::post('templates/fields/reset-defaults', [DocumentController::class, 'resetTemplateFields'])->name('templates.fields.reset-defaults');
+
+    // Administrator Only routes (Template Fields & User Management)
+    Route::middleware('admin')->group(function () {
+        // Template Field Configuration routes
+        Route::get('templates/fields', [DocumentController::class, 'templateFieldsIndex'])->name('templates.fields.index');
+        Route::put('templates/fields/{field}', [DocumentController::class, 'updateTemplateField'])->name('templates.fields.update');
+        Route::post('templates/fields/bulk-update', [DocumentController::class, 'bulkUpdateTemplateFields'])->name('templates.fields.bulk-update');
+        Route::post('templates/fields/reset-defaults', [DocumentController::class, 'resetTemplateFields'])->name('templates.fields.reset-defaults');
+
+        // User Management CRUD routes
+        Route::get('users', [\App\Http\Controllers\UserController::class, 'index'])->name('users.index');
+        Route::post('users', [\App\Http\Controllers\UserController::class, 'store'])->name('users.store');
+        Route::put('users/{user}', [\App\Http\Controllers\UserController::class, 'update'])->name('users.update');
+        Route::delete('users/{user}', [\App\Http\Controllers\UserController::class, 'destroy'])->name('users.destroy');
+    });
 });
 
 require __DIR__.'/settings.php';

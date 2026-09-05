@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
 
         User::firstOrCreate(
             ['email' => 'wahyuadamanandika01@gmail.com'],
-            ['name' => 'Wahyu Adam', 'password' => 'password']
+            ['name' => 'Wahyu Adam', 'password' => 'password', 'role' => 'admin']
         );
 
         $this->call([

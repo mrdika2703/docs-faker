@@ -52,10 +52,10 @@ export function LoadingOverlay({
         if (completed || p >= 100) return 'Selesai! Menampilkan hasil...';
         if (controlledStageText) return controlledStageText;
         if (description) return description;
-        if (p < 25) return 'Memvalidasi & memuat template...';
-        if (p < 55) return 'Merender pemetaan karakter glyph font di RAM...';
-        if (p < 85) return 'Menerapkan Photoshop LUT color grading...';
-        return 'Finalisasi output data...';
+        if (p < 25) return 'Memeriksa data dokumen...';
+        if (p < 55) return 'Menyusun teks dan tata letak...';
+        if (p < 85) return 'Menyesuaikan visual dokumen...';
+        return 'Menyelesaikan dokumen...';
     };
 
     useEffect(() => {
@@ -186,16 +186,39 @@ export function LoadingOverlay({
                 )}
             >
                 {/* Header with Icon & Title */}
-                <div className="flex items-center gap-3">
-                    <div
-                        className={cn(
-                            'flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-200',
-                            showCompleted
-                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400'
-                                : 'bg-neutral-100 dark:bg-neutral-800',
+                <div className="flex items-center gap-3.5">
+                    <div className="relative flex size-11 shrink-0 items-center justify-center">
+                        {!showCompleted ? (
+                            <>
+                                {/* Continuous spinning indicator */}
+                                <svg
+                                    className="absolute inset-0 size-11 animate-spin text-primary"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                >
+                                    <circle
+                                        className="opacity-20"
+                                        cx="12"
+                                        cy="12"
+                                        r="9.5"
+                                        stroke="currentColor"
+                                        strokeWidth="2.5"
+                                    />
+                                    <path
+                                        className="opacity-90"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    />
+                                </svg>
+                                <div className="flex size-7 items-center justify-center rounded-md bg-neutral-100 dark:bg-neutral-800">
+                                    {getIcon()}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+                                {getIcon()}
+                            </div>
                         )}
-                    >
-                        {getIcon()}
                     </div>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
@@ -243,8 +266,13 @@ export function LoadingOverlay({
                 </div>
 
                 <div className="mt-3 flex items-center justify-between text-[11px] text-neutral-400 dark:text-neutral-500">
-                    <span>{showCompleted ? 'Berhasil diproses' : 'Memproses di RAM...'}</span>
-                    <span>{showCompleted ? '✓ 100%' : 'Harap tunggu'}</span>
+                    <span className="flex items-center gap-1.5">
+                        {!showCompleted && (
+                            <span className="inline-block size-1.5 rounded-full bg-primary animate-ping" />
+                        )}
+                        <span>{showCompleted ? 'Berhasil diproses' : 'Sedang memproses...'}</span>
+                    </span>
+                    <span>{showCompleted ? '✓ Selesai' : 'Harap tunggu'}</span>
                 </div>
             </div>
         </div>

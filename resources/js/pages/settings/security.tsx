@@ -123,7 +123,7 @@ export default function Security(props: Props) {
                 </Form>
             </div>
 
-            <ManageTwoFactor
+            {/* <ManageTwoFactor
                 canManageTwoFactor={props.canManageTwoFactor}
                 requiresConfirmation={props.requiresConfirmation}
                 twoFactorEnabled={props.twoFactorEnabled}
@@ -132,7 +132,7 @@ export default function Security(props: Props) {
             <ManagePasskeys
                 canManagePasskeys={props.canManagePasskeys}
                 passkeys={props.passkeys}
-            />
+            /> */}
         </>
     );
 }

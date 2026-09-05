@@ -251,9 +251,9 @@ export default function CreateCombinedPage({
         try {
             const { stnkData, pajakData } = splitCombinedPayload(formData);
 
-            // Step 1: Render STNK Image in RAM
+            // Step 1: Render STNK Image
             setPreviewProgress(45);
-            setPreviewStage('Merender STNK (Multi-Font & Color Grading)...');
+            setPreviewStage('Merender pratinjau STNK...');
 
             const stnkRes = await fetch('/documents/preview', {
                 method: 'POST',
@@ -276,11 +276,11 @@ export default function CreateCombinedPage({
             // Immediately set STNK preview
             setStnkPreview(stnkJson.preview_url);
             setPreviewProgress(60);
-            setPreviewStage('STNK selesai! Merender dokumen PAJAK di RAM...');
+            setPreviewStage('STNK selesai! Memproses pratinjau Pajak...');
 
-            // Step 2: Render PAJAK Image in RAM
+            // Step 2: Render PAJAK Image
             setPreviewProgress(88);
-            setPreviewStage('Menerapkan Color Grading & Composite PAJAK...');
+            setPreviewStage('Menyusun pratinjau Pajak...');
 
             const pajakRes = await fetch('/documents/preview', {
                 method: 'POST',
@@ -303,8 +303,8 @@ export default function CreateCombinedPage({
             // Set PAJAK preview
             setPajakPreview(pajakJson.preview_url);
             setPreviewProgress(100);
-            setPreviewStage('Selesai! Live preview STNK & PAJAK siap.');
-            toast.success('Preview STNK & PAJAK berhasil di-render di RAM!');
+            setPreviewStage('Pratinjau STNK & Pajak siap.');
+            toast.success('Pratinjau STNK & Pajak berhasil dimuat.');
         } catch (err: any) {
             toast.error(err.message || 'Gagal merender live preview.');
         } finally {
@@ -412,7 +412,7 @@ export default function CreateCombinedPage({
                 stageText={previewStage}
                 title="Merender Preview STNK & PAJAK"
                 type="preview"
-                badge="Live RAM"
+                badge="Pratinjau"
             />
             <LoadingOverlay
                 isOpen={isGeneratingWord}
@@ -473,7 +473,7 @@ export default function CreateCombinedPage({
                             ) : (
                                 <Eye className="size-3.5" />
                             )}
-                            Preview Keduanya (RAM)
+                            Pratinjau Dokumen
                         </Button>
                         <Button
                             size="sm"
@@ -506,11 +506,10 @@ export default function CreateCombinedPage({
                                 </div>
                                 <div>
                                     <CardTitle className="text-sm">
-                                        Preview STNK (RAM)
+                                        Pratinjau STNK
                                     </CardTitle>
                                     <CardDescription className="text-xs">
-                                        Color Graded (Brightness -20, Contrast
-                                        +29) &bull; Template #{stnkTemplate?.id}
+                                        Pratinjau tampilan dokumen STNK
                                     </CardDescription>
                                 </div>
                             </div>
@@ -524,7 +523,7 @@ export default function CreateCombinedPage({
                                     <div className="flex flex-col items-center gap-2">
                                         <Spinner className="size-6 text-neutral-600" />
                                         <span className="text-xs text-neutral-500">
-                                            Rendering STNK...
+                                            Memproses STNK...
                                         </span>
                                     </div>
                                 ) : stnkPreview ? (
@@ -553,12 +552,10 @@ export default function CreateCombinedPage({
                                 </div>
                                 <div>
                                     <CardTitle className="text-sm">
-                                        Preview PAJAK (RAM)
+                                        Pratinjau Pajak
                                     </CardTitle>
                                     <CardDescription className="text-xs">
-                                        Color Graded (Multi-Font: Bold, Reg-U,
-                                        Reg-B) &bull; Template #
-                                        {pajakTemplate?.id}
+                                        Pratinjau tampilan dokumen Pajak
                                     </CardDescription>
                                 </div>
                             </div>
@@ -572,7 +569,7 @@ export default function CreateCombinedPage({
                                     <div className="flex flex-col items-center gap-2">
                                         <Spinner className="size-6 text-neutral-600" />
                                         <span className="text-xs text-neutral-500">
-                                            Rendering PAJAK...
+                                            Memproses Pajak...
                                         </span>
                                     </div>
                                 ) : pajakPreview ? (
@@ -1678,7 +1675,7 @@ export default function CreateCombinedPage({
                                     ) : (
                                         <Eye className="size-4" />
                                     )}
-                                    Preview Keduanya (RAM)
+                                    Pratinjau Dokumen
                                 </Button>
 
                                 <Button

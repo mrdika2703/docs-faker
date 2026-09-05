@@ -122,7 +122,7 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
 
         try {
             setDownloadProgress(70);
-            setDownloadStage(`Merender ${item.template_name} di RAM...`);
+            setDownloadStage(`Menyiapkan file ${item.template_name}...`);
 
             const res = await fetch(`/documents/history/${item.id}/download`);
             if (!res.ok) throw new Error('Gagal mengunduh file.');
@@ -157,10 +157,10 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
         return templateMatch || dataMatch || idMatch;
     });
 
-    // Handle Live RAM Preview
+    // Handle Document Preview
     const handlePreview = async (item: HistoryItem) => {
         setPreviewProgress(20);
-        setPreviewStage(`Memuat record history #${item.id}...`);
+        setPreviewStage(`Memuat data ${item.template_name} (#${item.id})...`);
 
         setPreviewDoc({
             title: `${item.template_name} (#${item.id})`,
@@ -172,7 +172,7 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
 
         try {
             setPreviewProgress(70);
-            setPreviewStage(`Merender ulang ${item.template_name} di RAM...`);
+            setPreviewStage(`Menyiapkan pratinjau ${item.template_name}...`);
 
             const res = await fetch(`/documents/history/${item.id}/preview`, {
                 headers: {
@@ -527,10 +527,10 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
                                                                         item,
                                                                     )
                                                                 }
-                                                                title="Preview di RAM"
+                                                                title="Pratinjau Dokumen"
                                                             >
                                                                 <Eye className="size-3.5" />
-                                                                Preview
+                                                                Pratinjau
                                                             </Button>
 
                                                             {/* Edit */}
@@ -629,10 +629,10 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
                 <DialogContent className="max-w-4xl">
                     <DialogHeader>
                         <DialogTitle>
-                            Live RAM Composite: {previewDoc?.title}
+                            Pratinjau: {previewDoc?.title}
                         </DialogTitle>
                         <DialogDescription>
-                            Render on-the-fly dari data JSON tersimpan.
+                            Pratinjau dokumen dari data yang tersimpan.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -641,7 +641,7 @@ export default function DocumentHistoryPage({ histories }: HistoryPageProps) {
                             <div className="flex flex-col items-center gap-3">
                                 <Spinner className="size-8" />
                                 <span className="text-sm text-neutral-500">
-                                    Me-render gambar di RAM...
+                                    Memuat pratinjau dokumen...
                                 </span>
                             </div>
                         ) : previewDoc?.imageUrl ? (

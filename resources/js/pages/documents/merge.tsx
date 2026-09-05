@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { LoadingOverlay } from '@/components/loading-overlay';
@@ -16,9 +17,11 @@ import {
     FileText,
     Layers,
     Printer,
+    Search,
     Sparkles,
+    X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface HistoryItem {
     id: number;
@@ -34,7 +37,63 @@ interface MergeProps {
     pajakHistories: HistoryItem[];
 }
 
+function filterAndRankHistories(items: HistoryItem[], query: string): HistoryItem[] {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) {
+        // Tampilkan maks 10 dokumen terbaru saat belum mencari
+        return items.slice(0, 10);
+    }
+
+    const cleanQuery = trimmed.replace(/\s+/g, '');
+
+    const scored = items
+        .map((item) => {
+            const nopolLower = (item.nopol || '').toLowerCase();
+            const cleanNopol = nopolLower.replace(/\s+/g, '');
+            const namaLower = (item.nama_pemilik || '').toLowerCase();
+            const idStr = String(item.id);
+
+            let score = 0;
+
+            // Nopol match
+            if (nopolLower === trimmed || cleanNopol === cleanQuery) {
+                score += 100;
+            } else if (cleanNopol.startsWith(cleanQuery)) {
+                score += 70;
+            } else if (cleanNopol.includes(cleanQuery)) {
+                score += 50;
+            }
+
+            // Nama pemilik match
+            if (namaLower === trimmed) {
+                score += 80;
+            } else if (namaLower.startsWith(trimmed)) {
+                score += 40;
+            } else if (namaLower.includes(trimmed)) {
+                score += 30;
+            }
+
+            // ID match
+            if (idStr === trimmed) {
+                score += 90;
+            } else if (idStr.includes(trimmed)) {
+                score += 20;
+            }
+
+            return { item, score };
+        })
+        .filter((entry) => entry.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map((entry) => entry.item);
+
+    // Tampilkan maks 5 hasil pencarian paling sesuai
+    return scored.slice(0, 5);
+}
+
 export default function MergePage({ stnkHistories = [], pajakHistories = [] }: MergeProps) {
+    const [stnkSearch, setStnkSearch] = useState('');
+    const [pajakSearch, setPajakSearch] = useState('');
+
     const [selectedStnkId, setSelectedStnkId] = useState<number | null>(
         stnkHistories.length > 0 ? stnkHistories[0].id : null,
     );
@@ -45,6 +104,16 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
     const [downloadProgress, setDownloadProgress] = useState(0);
     const [downloadStage, setDownloadStage] = useState('');
     const [downloadError, setDownloadError] = useState<string | null>(null);
+
+    const displayedStnkHistories = useMemo(
+        () => filterAndRankHistories(stnkHistories, stnkSearch),
+        [stnkHistories, stnkSearch]
+    );
+
+    const displayedPajakHistories = useMemo(
+        () => filterAndRankHistories(pajakHistories, pajakSearch),
+        [pajakHistories, pajakSearch]
+    );
 
     const selectedStnk = stnkHistories.find((item) => item.id === selectedStnkId);
     const selectedPajak = pajakHistories.find((item) => item.id === selectedPajakId);
@@ -59,24 +128,24 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
         if (!hasSelection) return;
 
         setIsDownloading(true);
-        setDownloadProgress(15);
-        setDownloadStage('Menyiapkan record history STNK & PAJAK...');
+        setDownloadProgress(5);
+        setDownloadStage('Menyiapkan data STNK & PAJAK...');
         setDownloadError(null);
 
         try {
             const token =
-                (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ||
-                '';
+                (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
 
-            setDownloadProgress(70);
-            setDownloadStage('Merender gambar & mengemas layout Word A4 Landscape...');
+            // --- Tahap 1: Kirim request prepare, server render PNG + build DOCX ---
+            setDownloadProgress(15);
+            setDownloadStage('Merender gambar dokumen...');
 
-            const response = await fetch('/documents/merge/download', {
+            const prepareRes = await fetch('/documents/merge/prepare', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': token,
-                    Accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    Accept: 'application/json',
                 },
                 body: JSON.stringify({
                     stnk_history_id: selectedStnkId,
@@ -84,29 +153,80 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                 }),
             });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Gagal membuat file dokumen Word.');
+            if (!prepareRes.ok) {
+                const errData = await prepareRes.json().catch(() => ({}));
+                throw new Error(errData.message || 'Gagal menyiapkan dokumen Word.');
             }
 
-            const blob = await response.blob();
-            setDownloadProgress(100);
+            const prepareData = await prepareRes.json();
+            const jobId: string = prepareData.job_id;
+
+            setDownloadProgress(70);
+            setDownloadStage('Menyusun layout Word A4 Landscape...');
+
+            // --- Tahap 2: Poll status sampai ready (seharusnya langsung ready karena prepare sudah selesai) ---
+            let attempts = 0;
+            const maxAttempts = 30; // maks 30 x 600ms = 18 detik
+            const stageMessages = [
+                'Menyusun dokumen Word...',
+                'Menata tata letak halaman...',
+                'Menyesuaikan posisi gambar...',
+                'Menyelesaikan file .docx...',
+            ];
+
+            await new Promise<void>((resolve, reject) => {
+                const poll = () => {
+                    attempts++;
+                    const stageMsg = stageMessages[Math.min(attempts - 1, stageMessages.length - 1)];
+                    const prog = Math.min(70 + Math.floor((attempts / maxAttempts) * 25), 94);
+                    setDownloadProgress(prog);
+                    setDownloadStage(stageMsg);
+
+                    fetch(`/documents/merge/status/${jobId}`, {
+                        headers: { Accept: 'application/json' },
+                    })
+                        .then((r) => r.json())
+                        .then((data) => {
+                            if (data.status === 'ready') {
+                                resolve();
+                            } else if (attempts >= maxAttempts) {
+                                reject(new Error('Timeout: file dokumen tidak kunjung siap.'));
+                            } else {
+                                setTimeout(poll, 600);
+                            }
+                        })
+                        .catch(() => {
+                            if (attempts >= maxAttempts) {
+                                reject(new Error('Gagal memeriksa status dokumen.'));
+                            } else {
+                                setTimeout(poll, 600);
+                            }
+                        });
+                };
+                poll();
+            });
+
+            // --- Tahap 3: Redirect browser ke URL download (browser tampilkan progress native) ---
+            setDownloadProgress(98);
             setDownloadStage('File siap! Membuka unduhan...');
 
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = targetFilename;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            // Buka download via window.location (GET) agar browser bisa tampilkan progress download nyata
+            window.location.href = `/documents/merge/download/${jobId}`;
+
+            // Tutup overlay setelah jeda singkat
+            setTimeout(() => {
+                setIsDownloading(false);
+                setDownloadProgress(0);
+                setDownloadStage('');
+            }, 2000);
         } catch (err: any) {
             setDownloadError(err.message || 'Terjadi kesalahan saat mengunduh dokumen.');
-        } finally {
             setIsDownloading(false);
+            setDownloadProgress(0);
+            setDownloadStage('');
         }
     };
+
 
     return (
         <>
@@ -141,7 +261,7 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                 </span>
                             </div>
                             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                                Gabungkan output STNK dan PAJAK dari history ke dalam satu file Word (.docx) format A4 Landscape dengan posisi cetak presisi dan margin Narrow (1,27 cm).
+                                Gabungkan dokumen STNK dan Pajak dari riwayat ke dalam satu file Word (.docx) format A4 Landscape siap cetak.
                             </p>
                         </div>
                     </div>
@@ -194,7 +314,7 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                         </div>
                                     </div>
                                     <span className="text-xs font-medium text-neutral-400">
-                                        {stnkHistories.length} item tersedia
+                                        {stnkHistories.length} total
                                     </span>
                                 </div>
                             </CardHeader>
@@ -202,64 +322,107 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                             <CardContent className="space-y-3">
                                 {stnkHistories.length === 0 ? (
                                     <div className="rounded-lg border border-dashed border-neutral-300 p-4 text-center text-sm text-neutral-500 dark:border-neutral-700">
-                                        Belum ada data generate STNK di history.{' '}
+                                        Belum ada riwayat dokumen STNK.{' '}
                                         <Link href="/documents/create/stnk" className="font-semibold text-emerald-600 underline">
                                             Buat STNK Sekarang
                                         </Link>
                                     </div>
                                 ) : (
-                                    <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                                        {/* Option None */}
-                                        <div
-                                            onClick={() => setSelectedStnkId(null)}
-                                            className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 text-xs transition-all ${
-                                                selectedStnkId === null
-                                                    ? 'border-neutral-900 bg-neutral-900/5 font-semibold text-neutral-900 dark:border-neutral-200 dark:bg-neutral-100/5 dark:text-neutral-100'
-                                                    : 'border-sidebar-border text-neutral-500 hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
-                                            }`}
-                                        >
-                                            <span>-- Tidak Menggunakan Dokumen STNK (Kosongkan) --</span>
-                                            {selectedStnkId === null && <Check className="size-4 text-neutral-900 dark:text-neutral-100" />}
+                                    <>
+                                        {/* Search Input STNK */}
+                                        <div className="space-y-1.5">
+                                            <div className="relative">
+                                                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400" />
+                                                <Input
+                                                    type="text"
+                                                    value={stnkSearch}
+                                                    onChange={(e) => setStnkSearch(e.target.value)}
+                                                    placeholder="Cari nopol / nama pemilik STNK..."
+                                                    className="h-8 pl-8 pr-8 text-xs"
+                                                />
+                                                {stnkSearch && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setStnkSearch('')}
+                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                                                    >
+                                                        <X className="size-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center justify-between text-[11px] text-neutral-500">
+                                                <span>
+                                                    {stnkSearch.trim()
+                                                        ? `Hasil pencarian (maks 5): ${displayedStnkHistories.length} item`
+                                                        : `10 dokumen terbaru (${displayedStnkHistories.length} ditampilkan)`}
+                                                </span>
+                                                {selectedStnk && (
+                                                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                                                        Terpilih: {selectedStnk.nopol}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
 
-                                        {stnkHistories.map((item) => {
-                                            const isSelected = selectedStnkId === item.id;
-                                            return (
-                                                <div
-                                                    key={item.id}
-                                                    onClick={() => setSelectedStnkId(item.id)}
-                                                    className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all ${
-                                                        isSelected
-                                                            ? 'border-emerald-600 bg-emerald-50/50 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/20'
-                                                            : 'border-sidebar-border hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center gap-3">
+                                        <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                                            {/* Option None */}
+                                            <div
+                                                onClick={() => setSelectedStnkId(null)}
+                                                className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 text-xs transition-all ${
+                                                    selectedStnkId === null
+                                                        ? 'border-neutral-900 bg-neutral-900/5 font-semibold text-neutral-900 dark:border-neutral-200 dark:bg-neutral-100/5 dark:text-neutral-100'
+                                                        : 'border-sidebar-border text-neutral-500 hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
+                                                }`}
+                                            >
+                                                <span>-- Tanpa Dokumen STNK (Kosongkan) --</span>
+                                                {selectedStnkId === null && <Check className="size-4 text-neutral-900 dark:text-neutral-100" />}
+                                            </div>
+
+                                            {displayedStnkHistories.length === 0 ? (
+                                                <div className="rounded-lg border border-dashed border-neutral-300 p-4 text-center text-xs text-neutral-500 dark:border-neutral-700">
+                                                    Tidak ada dokumen STNK yang cocok dengan kata kunci &quot;{stnkSearch}&quot;.
+                                                </div>
+                                            ) : (
+                                                displayedStnkHistories.map((item) => {
+                                                    const isSelected = selectedStnkId === item.id;
+                                                    return (
                                                         <div
-                                                            className={`flex size-5 items-center justify-center rounded-full border text-[10px] ${
+                                                            key={item.id}
+                                                            onClick={() => setSelectedStnkId(item.id)}
+                                                            className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all ${
                                                                 isSelected
-                                                                    ? 'border-emerald-600 bg-emerald-600 text-white'
-                                                                    : 'border-neutral-300 dark:border-neutral-700'
+                                                                    ? 'border-emerald-600 bg-emerald-50/50 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/20'
+                                                                    : 'border-sidebar-border hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
                                                             }`}
                                                         >
-                                                            {isSelected && <Check className="size-3" />}
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-mono text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                                                                {item.nopol}
+                                                            <div className="flex items-center gap-3">
+                                                                <div
+                                                                    className={`flex size-5 items-center justify-center rounded-full border text-[10px] ${
+                                                                        isSelected
+                                                                            ? 'border-emerald-600 bg-emerald-600 text-white'
+                                                                            : 'border-neutral-300 dark:border-neutral-700'
+                                                                    }`}
+                                                                >
+                                                                    {isSelected && <Check className="size-3" />}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-mono text-xs font-bold text-neutral-900 dark:text-neutral-100">
+                                                                        {item.nopol}
+                                                                    </div>
+                                                                    <div className="text-[11px] text-neutral-500">
+                                                                        {item.nama_pemilik} &bull; {item.created_at_human}
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <div className="text-[11px] text-neutral-500">
-                                                                {item.nama_pemilik} &bull; {item.created_at_human}
-                                                            </div>
+                                                            <span className="rounded bg-neutral-100 px-2 py-0.5 font-mono text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                                                                ID: #{item.id}
+                                                            </span>
                                                         </div>
-                                                    </div>
-                                                    <span className="rounded bg-neutral-100 px-2 py-0.5 font-mono text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                                                        ID: #{item.id}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    </>
                                 )}
                             </CardContent>
                         </Card>
@@ -280,7 +443,7 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                         </div>
                                     </div>
                                     <span className="text-xs font-medium text-neutral-400">
-                                        {pajakHistories.length} item tersedia
+                                        {pajakHistories.length} total
                                     </span>
                                 </div>
                             </CardHeader>
@@ -288,64 +451,107 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                             <CardContent className="space-y-3">
                                 {pajakHistories.length === 0 ? (
                                     <div className="rounded-lg border border-dashed border-neutral-300 p-4 text-center text-sm text-neutral-500 dark:border-neutral-700">
-                                        Belum ada data generate PAJAK di history.{' '}
+                                        Belum ada riwayat dokumen Pajak.{' '}
                                         <Link href="/documents/create/pajak" className="font-semibold text-amber-600 underline">
-                                            Buat PAJAK Sekarang
+                                            Buat Pajak Sekarang
                                         </Link>
                                     </div>
                                 ) : (
-                                    <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                                        {/* Option None */}
-                                        <div
-                                            onClick={() => setSelectedPajakId(null)}
-                                            className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 text-xs transition-all ${
-                                                selectedPajakId === null
-                                                    ? 'border-neutral-900 bg-neutral-900/5 font-semibold text-neutral-900 dark:border-neutral-200 dark:bg-neutral-100/5 dark:text-neutral-100'
-                                                    : 'border-sidebar-border text-neutral-500 hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
-                                            }`}
-                                        >
-                                            <span>-- Tidak Menggunakan Dokumen PAJAK (Kosongkan) --</span>
-                                            {selectedPajakId === null && <Check className="size-4 text-neutral-900 dark:text-neutral-100" />}
+                                    <>
+                                        {/* Search Input PAJAK */}
+                                        <div className="space-y-1.5">
+                                            <div className="relative">
+                                                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400" />
+                                                <Input
+                                                    type="text"
+                                                    value={pajakSearch}
+                                                    onChange={(e) => setPajakSearch(e.target.value)}
+                                                    placeholder="Cari nopol / nama pemilik PAJAK..."
+                                                    className="h-8 pl-8 pr-8 text-xs"
+                                                />
+                                                {pajakSearch && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPajakSearch('')}
+                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                                                    >
+                                                        <X className="size-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center justify-between text-[11px] text-neutral-500">
+                                                <span>
+                                                    {pajakSearch.trim()
+                                                        ? `Hasil pencarian (maks 5): ${displayedPajakHistories.length} item`
+                                                        : `10 dokumen terbaru (${displayedPajakHistories.length} ditampilkan)`}
+                                                </span>
+                                                {selectedPajak && (
+                                                    <span className="font-medium text-amber-600 dark:text-amber-400">
+                                                        Terpilih: {selectedPajak.nopol}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
 
-                                        {pajakHistories.map((item) => {
-                                            const isSelected = selectedPajakId === item.id;
-                                            return (
-                                                <div
-                                                    key={item.id}
-                                                    onClick={() => setSelectedPajakId(item.id)}
-                                                    className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all ${
-                                                        isSelected
-                                                            ? 'border-amber-600 bg-amber-50/50 shadow-sm dark:border-amber-500 dark:bg-amber-950/20'
-                                                            : 'border-sidebar-border hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center gap-3">
+                                        <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                                            {/* Option None */}
+                                            <div
+                                                onClick={() => setSelectedPajakId(null)}
+                                                className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 text-xs transition-all ${
+                                                    selectedPajakId === null
+                                                        ? 'border-neutral-900 bg-neutral-900/5 font-semibold text-neutral-900 dark:border-neutral-200 dark:bg-neutral-100/5 dark:text-neutral-100'
+                                                        : 'border-sidebar-border text-neutral-500 hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
+                                                }`}
+                                            >
+                                                <span>-- Tanpa Dokumen Pajak (Kosongkan) --</span>
+                                                {selectedPajakId === null && <Check className="size-4 text-neutral-900 dark:text-neutral-100" />}
+                                            </div>
+
+                                            {displayedPajakHistories.length === 0 ? (
+                                                <div className="rounded-lg border border-dashed border-neutral-300 p-4 text-center text-xs text-neutral-500 dark:border-neutral-700">
+                                                    Tidak ada dokumen PAJAK yang cocok dengan kata kunci &quot;{pajakSearch}&quot;.
+                                                </div>
+                                            ) : (
+                                                displayedPajakHistories.map((item) => {
+                                                    const isSelected = selectedPajakId === item.id;
+                                                    return (
                                                         <div
-                                                            className={`flex size-5 items-center justify-center rounded-full border text-[10px] ${
+                                                            key={item.id}
+                                                            onClick={() => setSelectedPajakId(item.id)}
+                                                            className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all ${
                                                                 isSelected
-                                                                    ? 'border-amber-600 bg-amber-600 text-white'
-                                                                    : 'border-neutral-300 dark:border-neutral-700'
+                                                                    ? 'border-amber-600 bg-amber-50/50 shadow-sm dark:border-amber-500 dark:bg-amber-950/20'
+                                                                    : 'border-sidebar-border hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
                                                             }`}
                                                         >
-                                                            {isSelected && <Check className="size-3" />}
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-mono text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                                                                {item.nopol}
+                                                            <div className="flex items-center gap-3">
+                                                                <div
+                                                                    className={`flex size-5 items-center justify-center rounded-full border text-[10px] ${
+                                                                        isSelected
+                                                                            ? 'border-amber-600 bg-amber-600 text-white'
+                                                                            : 'border-neutral-300 dark:border-neutral-700'
+                                                                    }`}
+                                                                >
+                                                                    {isSelected && <Check className="size-3" />}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-mono text-xs font-bold text-neutral-900 dark:text-neutral-100">
+                                                                        {item.nopol}
+                                                                    </div>
+                                                                    <div className="text-[11px] text-neutral-500">
+                                                                        {item.nama_pemilik} &bull; {item.created_at_human}
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <div className="text-[11px] text-neutral-500">
-                                                                {item.nama_pemilik} &bull; {item.created_at_human}
-                                                            </div>
+                                                            <span className="rounded bg-neutral-100 px-2 py-0.5 font-mono text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                                                                ID: #{item.id}
+                                                            </span>
                                                         </div>
-                                                    </div>
-                                                    <span className="rounded bg-neutral-100 px-2 py-0.5 font-mono text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                                                        ID: #{item.id}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    </>
                                 )}
                             </CardContent>
                         </Card>
@@ -467,7 +673,7 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                         <li>Kertas: <strong>A4 Landscape (29.7 cm × 21.0 cm)</strong></li>
                                         <li>Margin: <strong>Narrow (1.27 cm keliling)</strong></li>
                                         <li>Ukuran Gambar: <strong>Tinggi 7.6 cm (Lock Ratio)</strong> &bull; STNK: 22.37 cm &bull; PAJAK: 21.65 cm</li>
-                                        <li>Posisi gambar menggunakan <strong>Absolute DrawingML Anchor</strong> sehingga tidak tergeser saat diprint.</li>
+                                        <li>Posisi gambar terkunci presisi sehingga tidak bergeser saat dicetak.</li>
                                         <li>Nama file download: <code className="font-mono font-semibold text-neutral-900 dark:text-neutral-100">{targetFilename}</code></li>
                                     </ul>
                                 </div>

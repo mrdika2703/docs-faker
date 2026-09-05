@@ -1,5 +1,5 @@
-import { Link } from '@inertiajs/react';
-import { FilePlus, FileText, History, Layers, LayoutGrid, Printer, SlidersHorizontal } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import { FilePlus, FileText, History, Layers, LayoutGrid, Printer, SlidersHorizontal, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -28,7 +28,7 @@ const sidebarNavGroups: NavGroup[] = [
         ],
     },
     {
-        title: 'Generasi Dokumen',
+        title: 'Pembuatan Dokumen',
         items: [
             {
                 title: 'Input STNK & PAJAK',
@@ -52,13 +52,13 @@ const sidebarNavGroups: NavGroup[] = [
         title: 'Dokumen & Cetak',
         items: [
             {
-                title: 'Merge Word (Print)',
+                title: 'Gabung Word (Cetak)',
                 href: '/documents/merge',
                 icon: Printer,
                 badge: '2-Page',
             },
             {
-                title: 'History Documents',
+                title: 'Riwayat Dokumen',
                 href: '/documents/history',
                 icon: History,
             },
@@ -71,6 +71,11 @@ const sidebarNavGroups: NavGroup[] = [
                 title: 'Pengaturan Field',
                 href: '/templates/fields',
                 icon: SlidersHorizontal,
+            },
+            {
+                title: 'Manajemen User',
+                href: '/users',
+                icon: Users,
             },
         ],
     },
@@ -90,6 +95,16 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage().props as any;
+    const isAdmin = auth?.user?.role === 'admin';
+
+    const visibleNavGroups = sidebarNavGroups.filter((group) => {
+        if (group.title === 'Konfigurasi' && !isAdmin) {
+            return false;
+        }
+        return true;
+    });
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -105,7 +120,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain groups={sidebarNavGroups} />
+                <NavMain groups={visibleNavGroups} />
             </SidebarContent>
 
             <SidebarFooter>

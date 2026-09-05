@@ -18,7 +18,7 @@ class TemplateFieldConfigTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->user = User::factory()->create();
+        $this->user = User::factory()->admin()->create();
         (new DocumentTemplateSeeder)->run();
     }
 
@@ -28,7 +28,14 @@ class TemplateFieldConfigTest extends TestCase
         $response->assertRedirect('/login');
     }
 
-    public function test_authenticated_user_can_view_template_fields_page(): void
+    public function test_regular_user_cannot_access_template_fields_page(): void
+    {
+        $regularUser = User::factory()->create(['role' => 'user']);
+        $response = $this->actingAs($regularUser)->get('/templates/fields');
+        $response->assertForbidden();
+    }
+
+    public function test_authenticated_admin_can_view_template_fields_page(): void
     {
         $response = $this->actingAs($this->user)->get('/templates/fields');
         $response->assertOk();

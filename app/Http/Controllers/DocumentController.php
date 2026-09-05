@@ -418,6 +418,126 @@ class DocumentController extends Controller
     }
 
     /**
+     * Prepare a merge job: render PNGs, build DOCX, store in temp, return job_id.
+     */
+    public function prepareMergeJob(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'stnk_history_id' => ['nullable', 'exists:document_histories,id'],
+            'pajak_history_id' => ['nullable', 'exists:document_histories,id'],
+        ]);
+
+        if (empty($validated['stnk_history_id']) && empty($validated['pajak_history_id'])) {
+            abort(SymfonyResponse::HTTP_UNPROCESSABLE_ENTITY, 'Pilih setidaknya 1 dokumen (STNK atau PAJAK).');
+        }
+
+        $user = $request->user();
+        $stnkPng = null;
+        $pajakPng = null;
+        $nopol = null;
+
+        if (! empty($validated['stnk_history_id'])) {
+            $stnkHistory = DocumentHistory::where('id', $validated['stnk_history_id'])
+                ->where('user_id', $user->id)
+                ->with('template')
+                ->firstOrFail();
+
+            $stnkPng = $this->imageService->renderImage($stnkHistory->template, $stnkHistory->input_data ?? []);
+            if (empty($nopol) && ! empty($stnkHistory->input_data['nopol'])) {
+                $nopol = $stnkHistory->input_data['nopol'];
+            }
+        }
+
+        if (! empty($validated['pajak_history_id'])) {
+            $pajakHistory = DocumentHistory::where('id', $validated['pajak_history_id'])
+                ->where('user_id', $user->id)
+                ->with('template')
+                ->firstOrFail();
+
+            $pajakPng = $this->imageService->renderImage($pajakHistory->template, $pajakHistory->input_data ?? []);
+            if (empty($nopol) && ! empty($pajakHistory->input_data['nopol'])) {
+                $nopol = $pajakHistory->input_data['nopol'];
+            }
+        }
+
+        $docxBinary = $this->wordService->generateDocx($stnkPng, $pajakPng);
+
+        $safeNopol = $nopol ? Str::slug(str_replace(' ', '_', (string) $nopol), '_') : 'DOKUMEN';
+        $filename = strtoupper($safeNopol).'.docx';
+
+        // Simpan ke storage/app/merge-jobs/ dengan job_id unik
+        $jobId = Str::uuid()->toString();
+        $dir = storage_path('app/merge-jobs');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        // Simpan binary docx
+        file_put_contents($dir.'/'.$jobId.'.docx', $docxBinary);
+        // Simpan metadata (filename) supaya endpoint download tahu nama file
+        file_put_contents($dir.'/'.$jobId.'.meta', $filename);
+
+        return response()->json([
+            'status'   => 'ready',
+            'job_id'   => $jobId,
+            'filename' => $filename,
+        ]);
+    }
+
+    /**
+     * Check status of a merge job.
+     */
+    public function statusMergeJob(string $jobId): JsonResponse
+    {
+        // Sanitasi job_id: hanya UUID format
+        if (! preg_match('/^[0-9a-f\-]{36}$/', $jobId)) {
+            return response()->json(['status' => 'not_found'], 404);
+        }
+
+        $path = storage_path('app/merge-jobs/'.$jobId.'.docx');
+
+        if (file_exists($path)) {
+            return response()->json(['status' => 'ready']);
+        }
+
+        return response()->json(['status' => 'not_found'], 404);
+    }
+
+    /**
+     * Stream and deliver the prepared merge DOCX file, then delete the temp files.
+     */
+    public function downloadMergeJob(string $jobId): HttpResponse
+    {
+        // Sanitasi job_id
+        if (! preg_match('/^[0-9a-f\-]{36}$/', $jobId)) {
+            abort(SymfonyResponse::HTTP_NOT_FOUND, 'Job tidak ditemukan.');
+        }
+
+        $dir  = storage_path('app/merge-jobs');
+        $docxPath = $dir.'/'.$jobId.'.docx';
+        $metaPath = $dir.'/'.$jobId.'.meta';
+
+        if (! file_exists($docxPath)) {
+            abort(SymfonyResponse::HTTP_NOT_FOUND, 'File dokumen tidak ditemukan atau sudah kadaluarsa.');
+        }
+
+        $filename = file_exists($metaPath) ? trim(file_get_contents($metaPath)) : 'DOKUMEN.docx';
+        $binary   = file_get_contents($docxPath);
+        $size     = strlen($binary);
+
+        // Hapus file temp setelah dibaca
+        @unlink($docxPath);
+        @unlink($metaPath);
+
+        return response($binary, SymfonyResponse::HTTP_OK, [
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Length'      => $size,
+            'Cache-Control'       => 'no-cache, private',
+        ]);
+    }
+
+    /**
      * Display unified combined create form for STNK & PAJAK.
      */
     public function createCombined(Request $request): Response

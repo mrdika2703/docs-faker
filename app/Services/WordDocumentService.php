@@ -63,34 +63,34 @@ class WordDocumentService
 
         // Halaman 1: Belakang STNK
         if ($stnkFrontPngBinary !== null && file_exists($stnkBackPngPath)) {
-            $rId = 'rId'.($relIndex++);
+            $rId = 'rId' . ($relIndex++);
             $imageRels['stnk_back'] = $rId;
             $zip->addFile($stnkBackPngPath, 'word/media/stnk_back.png');
-            $relsXml .= '<Relationship Id="'.$rId.'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/stnk_back.png"/>';
+            $relsXml .= '<Relationship Id="' . $rId . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/stnk_back.png"/>';
         }
 
         // Halaman 1: Belakang PAJAK
         if ($pajakFrontPngBinary !== null && file_exists($pajakBackPngPath)) {
-            $rId = 'rId'.($relIndex++);
+            $rId = 'rId' . ($relIndex++);
             $imageRels['pajak_back'] = $rId;
             $zip->addFile($pajakBackPngPath, 'word/media/pajak_back.png');
-            $relsXml .= '<Relationship Id="'.$rId.'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/pajak_back.png"/>';
+            $relsXml .= '<Relationship Id="' . $rId . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/pajak_back.png"/>';
         }
 
         // Halaman 2: Output STNK
         if ($stnkFrontPngBinary !== null) {
-            $rId = 'rId'.($relIndex++);
+            $rId = 'rId' . ($relIndex++);
             $imageRels['stnk_front'] = $rId;
             $zip->addFromString('word/media/stnk_front.png', $stnkFrontPngBinary);
-            $relsXml .= '<Relationship Id="'.$rId.'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/stnk_front.png"/>';
+            $relsXml .= '<Relationship Id="' . $rId . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/stnk_front.png"/>';
         }
 
         // Halaman 2: Output PAJAK
         if ($pajakFrontPngBinary !== null) {
-            $rId = 'rId'.($relIndex++);
+            $rId = 'rId' . ($relIndex++);
             $imageRels['pajak_front'] = $rId;
             $zip->addFromString('word/media/pajak_front.png', $pajakFrontPngBinary);
-            $relsXml .= '<Relationship Id="'.$rId.'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/pajak_front.png"/>';
+            $relsXml .= '<Relationship Id="' . $rId . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/pajak_front.png"/>';
         }
 
         $relsXml .= '</Relationships>';
@@ -113,16 +113,16 @@ class WordDocumentService
                 <w:drawing>
                     <wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="251658240" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">
                         <wp:simplePos x="0" y="0"/>
-                        <wp:positionH relativeFrom="'.$horizRel.'">
-                            <wp:posOffset>'.$horizOffsetEmus.'</wp:posOffset>
+                        <wp:positionH relativeFrom="' . $horizRel . '">
+                            <wp:posOffset>' . $horizOffsetEmus . '</wp:posOffset>
                         </wp:positionH>
-                        <wp:positionV relativeFrom="'.$vertRel.'">
-                            <wp:posOffset>'.$vertOffsetEmus.'</wp:posOffset>
+                        <wp:positionV relativeFrom="' . $vertRel . '">
+                            <wp:posOffset>' . $vertOffsetEmus . '</wp:posOffset>
                         </wp:positionV>
-                        <wp:extent cx="'.$cxEmus.'" cy="'.$cyEmus.'"/>
+                        <wp:extent cx="' . $cxEmus . '" cy="' . $cyEmus . '"/>
                         <wp:effectExtent l="0" t="0" r="0" b="0"/>
                         <wp:wrapNone/>
-                        <wp:docPr id="'.$docPrId.'" name="'.$docPrName.'"/>
+                        <wp:docPr id="' . $docPrId . '" name="' . $docPrName . '"/>
                         <wp:cNvGraphicFramePr>
                             <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
                         </wp:cNvGraphicFramePr>
@@ -130,13 +130,13 @@ class WordDocumentService
                             <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
                                 <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
                                     <pic:nvPicPr>
-                                        <pic:cNvPr id="'.$docPrId.'" name="'.$docPrName.'"/>
+                                        <pic:cNvPr id="' . $docPrId . '" name="' . $docPrName . '"/>
                                         <pic:cNvPicPr>
                                             <a:picLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
                                         </pic:cNvPicPr>
                                     </pic:nvPicPr>
                                     <pic:blipFill>
-                                        <a:blip r:embed="'.$rId.'" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
+                                        <a:blip r:embed="' . $rId . '" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
                                         <a:stretch>
                                             <a:fillRect/>
                                         </a:stretch>
@@ -144,7 +144,7 @@ class WordDocumentService
                                     <pic:spPr>
                                         <a:xfrm>
                                             <a:off x="0" y="0"/>
-                                            <a:ext cx="'.$cxEmus.'" cy="'.$cyEmus.'"/>
+                                            <a:ext cx="' . $cxEmus . '" cy="' . $cyEmus . '"/>
                                         </a:xfrm>
                                         <a:prstGeom prst="rect">
                                             <a:avLst/>
@@ -202,7 +202,7 @@ class WordDocumentService
                 'column',
                 720000,     // 2 cm
                 'paragraph',
-                3430800     // 9.53 cm
+                3718800     // 10.33 cm
             );
         }
         $page1Content .= '</w:p>';
@@ -264,10 +264,10 @@ class WordDocumentService
             xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
             xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
     <w:body>
-        '.$page1Content.'
-        '.$pageBreak.'
-        '.$page2Content.'
-        '.$sectPr.'
+        ' . $page1Content . '
+        ' . $pageBreak . '
+        ' . $page2Content . '
+        ' . $sectPr . '
     </w:body>
 </w:document>';
 

@@ -41,6 +41,7 @@ class DashboardController extends Controller
                     'template_id' => $doc->template_id,
                     'template_name' => $doc->template?->name ?? 'Unknown Template',
                     'input_data' => $doc->input_data,
+                    'nopol' => $doc->input_data['nopol'] ?? $doc->input_data['nomor-polisi'] ?? $doc->input_data['no_polisi'] ?? $doc->input_data['nomor'] ?? '',
                     'created_at' => $doc->created_at?->format('Y-m-d H:i:s'),
                     'created_at_human' => $doc->created_at?->diffForHumans(),
                 ];
