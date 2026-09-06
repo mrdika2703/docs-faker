@@ -1,12 +1,10 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
-    ArrowLeft,
     Download,
     Eye,
     Image as ImageIcon,
     RefreshCw,
     Save,
-    Type,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -99,7 +97,9 @@ const PAJAK_DEFAULTS: Record<string, string> = {
     'tahun-bayar': '14',
 };
 
-function getDefaultFormData(selectedTemplate?: TemplateItem): Record<string, string> {
+function getDefaultFormData(
+    selectedTemplate?: TemplateItem,
+): Record<string, string> {
     if (!selectedTemplate) return {};
     const fallback =
         selectedTemplate.name?.toUpperCase() === 'PAJAK'
@@ -109,7 +109,10 @@ function getDefaultFormData(selectedTemplate?: TemplateItem): Record<string, str
     const dynamicDefaults: Record<string, string> = {};
     if (selectedTemplate.fields && selectedTemplate.fields.length > 0) {
         selectedTemplate.fields.forEach((field) => {
-            if (field.default_value !== undefined && field.default_value !== null) {
+            if (
+                field.default_value !== undefined &&
+                field.default_value !== null
+            ) {
                 dynamicDefaults[field.field_name] = field.default_value;
             }
         });
@@ -165,9 +168,10 @@ export default function CreateDocument({
         setPreviewStage('Memvalidasi input data formulir...');
 
         try {
-            const token = document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content') || '';
+            const token =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') || '';
 
             setPreviewProgress(70);
             setPreviewStage(`Merender pratinjau ${selectedTemplate.name}...`);
@@ -190,9 +194,7 @@ export default function CreateDocument({
                 setPreviewImage(data.preview_url);
                 setPreviewProgress(100);
                 setPreviewStage('Pratinjau siap ditampilkan!');
-                toast.success(
-                    'Pratinjau dokumen berhasil dimuat!',
-                );
+                toast.success('Pratinjau dokumen berhasil dimuat!');
             } else {
                 toast.error(data.message || 'Failed to generate preview.');
             }
@@ -246,9 +248,10 @@ export default function CreateDocument({
         setGenerateStage('Menyimpan data payload ke history...');
 
         try {
-            const token = document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content') || '';
+            const token =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') || '';
 
             setGenerateProgress(70);
             setGenerateStage(`Membuat file ${selectedTemplate.name}...`);
@@ -297,54 +300,6 @@ export default function CreateDocument({
         toast.info(`Sample data ${selectedTemplate?.name || ''} diisi.`);
     };
 
-    const getFontBadge = (style?: string) => {
-        switch (style) {
-            case 'font_b':
-                return {
-                    label: 'Font B (Bold Official)',
-                    className:
-                        'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800',
-                };
-            case 'font_c':
-                return {
-                    label: 'Font C (Typewriter Accent)',
-                    className:
-                        'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800',
-                };
-            case 'stnk':
-                return {
-                    label: 'Font STNK',
-                    className:
-                        'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800',
-                };
-            case 'pajak':
-            case 'pajak_regular_u':
-                return {
-                    label: 'Font Pajak (Reg-U)',
-                    className:
-                        'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800',
-                };
-            case 'pajak_regular_b':
-                return {
-                    label: 'Font Pajak (Reg-B)',
-                    className:
-                        'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800',
-                };
-            case 'pajak_bold':
-                return {
-                    label: 'Font Pajak (Bold)',
-                    className:
-                        'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800',
-                };
-            default:
-                return {
-                    label: 'Font A (Clean Sans)',
-                    className:
-                        'bg-neutral-100 text-neutral-800 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700',
-                };
-        }
-    };
-
     return (
         <>
             <Head title={`Input ${selectedTemplate?.name || 'Document'}`} />
@@ -388,19 +343,10 @@ export default function CreateDocument({
                                 >
                                     Template #{selectedTemplate?.id}
                                 </Badge>
-                                {selectedTemplate?.name === 'PAJAK' && (
-                                    <Badge className="bg-indigo-600 text-xs text-white">
-                                        Multi-Font (Bold, Reg-U, Reg-B)
-                                    </Badge>
-                                )}
-                                {selectedTemplate?.name === 'STNK' && (
-                                    <Badge className="bg-emerald-600 text-xs text-white">
-                                        STNK Font Pack
-                                    </Badge>
-                                )}
                             </div>
                             <p className="text-sm text-neutral-500">
-                                Isi data formulir untuk menghasilkan dokumen sesuai template.
+                                Isi data formulir untuk menghasilkan dokumen
+                                sesuai template.
                             </p>
                         </div>
                     </div>
@@ -434,7 +380,8 @@ export default function CreateDocument({
                                     Pratinjau Dokumen
                                 </CardTitle>
                                 <CardDescription className="text-xs">
-                                    Tampilan hasil dokumen sebelum disimpan atau diunduh
+                                    Tampilan hasil dokumen sebelum disimpan atau
+                                    diunduh
                                 </CardDescription>
                             </div>
                             <Button
@@ -488,65 +435,6 @@ export default function CreateDocument({
                                     </div>
                                 )}
                             </div>
-
-                            {/* Font Legend */}
-                            <div className="rounded-lg border border-sidebar-border bg-neutral-50 p-3 text-xs dark:bg-neutral-900/40">
-                                <div className="mb-2 flex items-center gap-1.5 font-semibold text-neutral-700 dark:text-neutral-300">
-                                    <Type className="size-3.5 text-neutral-500" />
-                                    <span>Font Styles Reference:</span>
-                                </div>
-                                {selectedTemplate?.name === 'PAJAK' ? (
-                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                                        <div className="flex items-center gap-2 rounded border border-purple-200 bg-white p-1.5 dark:border-purple-900 dark:bg-neutral-800">
-                                            <span className="inline-block size-3 rounded bg-purple-600" />
-                                            <div>
-                                                <div className="text-[11px] font-semibold text-purple-700 dark:text-purple-400">
-                                                    Bold Font
-                                                </div>
-                                                <div className="text-[10px] text-neutral-500">
-                                                    Nopol, Tgl Pajak
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 rounded border border-amber-200 bg-white p-1.5 dark:border-amber-900 dark:bg-neutral-800">
-                                            <span className="inline-block size-3 rounded bg-amber-600" />
-                                            <div>
-                                                <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
-                                                    Regular-U Font
-                                                </div>
-                                                <div className="text-[10px] text-neutral-500">
-                                                    Nama, Alamat 1, 2, 3
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 rounded border border-orange-200 bg-white p-1.5 dark:border-orange-900 dark:bg-neutral-800">
-                                            <span className="inline-block size-3 rounded bg-orange-600" />
-                                            <div>
-                                                <div className="text-[11px] font-semibold text-orange-700 dark:text-orange-400">
-                                                    Regular-B Font
-                                                </div>
-                                                <div className="text-[10px] text-neutral-500">
-                                                    Merk, Jenis, Model, dll.
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-2 rounded border border-emerald-200 bg-white p-2 dark:border-emerald-900 dark:bg-neutral-800">
-                                        <span className="inline-block size-3 rounded bg-emerald-600" />
-                                        <div>
-                                            <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-                                                STNK Font Pack
-                                            </div>
-                                            <div className="text-[10px] text-neutral-500">
-                                                Digunakan untuk seluruh field
-                                                kolom kiri dan kolom kanan
-                                                template STNK.
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
                         </CardContent>
                     </Card>
 
@@ -558,8 +446,7 @@ export default function CreateDocument({
                                     Document Information
                                 </CardTitle>
                                 <CardDescription className="text-xs">
-                                    Each field maps to specific coordinates and
-                                    font styles
+                                    Enter document information below
                                 </CardDescription>
                             </div>
                             <Button
@@ -581,9 +468,6 @@ export default function CreateDocument({
                                         formData[field.field_name] || '';
                                     const max = field.max_chars || 50;
                                     const isNearLimit = value.length >= max;
-                                    const fontInfo = getFontBadge(
-                                        field.font_style,
-                                    );
 
                                     return (
                                         <div
@@ -591,24 +475,15 @@ export default function CreateDocument({
                                             className="space-y-1.5"
                                         >
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Label
-                                                        htmlFor={
-                                                            field.field_name
-                                                        }
-                                                        className="text-xs font-semibold capitalize"
-                                                    >
-                                                        {field.field_name.replace(
-                                                            /_/g,
-                                                            ' ',
-                                                        )}
-                                                    </Label>
-                                                    <span
-                                                        className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${fontInfo.className}`}
-                                                    >
-                                                        {fontInfo.label}
-                                                    </span>
-                                                </div>
+                                                <Label
+                                                    htmlFor={field.field_name}
+                                                    className="text-xs font-semibold capitalize"
+                                                >
+                                                    {field.field_name.replace(
+                                                        /_/g,
+                                                        ' ',
+                                                    )}
+                                                </Label>
                                                 <span
                                                     className={`font-mono text-[11px] ${
                                                         isNearLimit
@@ -617,8 +492,6 @@ export default function CreateDocument({
                                                     }`}
                                                 >
                                                     {value.length}/{max} chars
-                                                    (X:{field.start_x}, Y:
-                                                    {field.start_y})
                                                 </span>
                                             </div>
                                             <Input
@@ -710,7 +583,8 @@ export default function CreateDocument({
                             Latar Template: {selectedTemplate?.name}
                         </DialogTitle>
                         <DialogDescription>
-                            Latar dasar template dokumen {selectedTemplate?.name}.
+                            Latar dasar template dokumen{' '}
+                            {selectedTemplate?.name}.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex min-h-[350px] items-center justify-center rounded-lg border border-sidebar-border bg-neutral-100 p-4 dark:bg-neutral-900">

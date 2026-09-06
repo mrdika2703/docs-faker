@@ -1,5 +1,11 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -7,7 +13,6 @@ import { LoadingOverlay } from '@/components/loading-overlay';
 import { Head, Link } from '@inertiajs/react';
 import {
     AlertCircle,
-    ArrowLeft,
     Check,
     CheckCircle2,
     Download,
@@ -37,7 +42,10 @@ interface MergeProps {
     pajakHistories: HistoryItem[];
 }
 
-function filterAndRankHistories(items: HistoryItem[], query: string): HistoryItem[] {
+function filterAndRankHistories(
+    items: HistoryItem[],
+    query: string,
+): HistoryItem[] {
     const trimmed = query.trim().toLowerCase();
     if (!trimmed) {
         // Tampilkan maks 10 dokumen terbaru saat belum mencari
@@ -90,7 +98,10 @@ function filterAndRankHistories(items: HistoryItem[], query: string): HistoryIte
     return scored.slice(0, 5);
 }
 
-export default function MergePage({ stnkHistories = [], pajakHistories = [] }: MergeProps) {
+export default function MergePage({
+    stnkHistories = [],
+    pajakHistories = [],
+}: MergeProps) {
     const [stnkSearch, setStnkSearch] = useState('');
     const [pajakSearch, setPajakSearch] = useState('');
 
@@ -107,21 +118,26 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
 
     const displayedStnkHistories = useMemo(
         () => filterAndRankHistories(stnkHistories, stnkSearch),
-        [stnkHistories, stnkSearch]
+        [stnkHistories, stnkSearch],
     );
 
     const displayedPajakHistories = useMemo(
         () => filterAndRankHistories(pajakHistories, pajakSearch),
-        [pajakHistories, pajakSearch]
+        [pajakHistories, pajakSearch],
     );
 
-    const selectedStnk = stnkHistories.find((item) => item.id === selectedStnkId);
-    const selectedPajak = pajakHistories.find((item) => item.id === selectedPajakId);
+    const selectedStnk = stnkHistories.find(
+        (item) => item.id === selectedStnkId,
+    );
+    const selectedPajak = pajakHistories.find(
+        (item) => item.id === selectedPajakId,
+    );
 
     const hasSelection = selectedStnkId !== null || selectedPajakId !== null;
 
     // Determine target filename preview
-    const targetNopol = selectedStnk?.nopol || selectedPajak?.nopol || 'DOKUMEN';
+    const targetNopol =
+        selectedStnk?.nopol || selectedPajak?.nopol || 'DOKUMEN';
     const targetFilename = `${targetNopol.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}.docx`;
 
     const handleDownload = async () => {
@@ -134,7 +150,11 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
 
         try {
             const token =
-                (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+                (
+                    document.querySelector(
+                        'meta[name="csrf-token"]',
+                    ) as HTMLMetaElement
+                )?.content || '';
 
             // --- Tahap 1: Kirim request prepare, server render PNG + build DOCX ---
             setDownloadProgress(15);
@@ -155,7 +175,9 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
 
             if (!prepareRes.ok) {
                 const errData = await prepareRes.json().catch(() => ({}));
-                throw new Error(errData.message || 'Gagal menyiapkan dokumen Word.');
+                throw new Error(
+                    errData.message || 'Gagal menyiapkan dokumen Word.',
+                );
             }
 
             const prepareData = await prepareRes.json();
@@ -177,8 +199,14 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
             await new Promise<void>((resolve, reject) => {
                 const poll = () => {
                     attempts++;
-                    const stageMsg = stageMessages[Math.min(attempts - 1, stageMessages.length - 1)];
-                    const prog = Math.min(70 + Math.floor((attempts / maxAttempts) * 25), 94);
+                    const stageMsg =
+                        stageMessages[
+                            Math.min(attempts - 1, stageMessages.length - 1)
+                        ];
+                    const prog = Math.min(
+                        70 + Math.floor((attempts / maxAttempts) * 25),
+                        94,
+                    );
                     setDownloadProgress(prog);
                     setDownloadStage(stageMsg);
 
@@ -190,14 +218,22 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                             if (data.status === 'ready') {
                                 resolve();
                             } else if (attempts >= maxAttempts) {
-                                reject(new Error('Timeout: file dokumen tidak kunjung siap.'));
+                                reject(
+                                    new Error(
+                                        'Timeout: file dokumen tidak kunjung siap.',
+                                    ),
+                                );
                             } else {
                                 setTimeout(poll, 600);
                             }
                         })
                         .catch(() => {
                             if (attempts >= maxAttempts) {
-                                reject(new Error('Gagal memeriksa status dokumen.'));
+                                reject(
+                                    new Error(
+                                        'Gagal memeriksa status dokumen.',
+                                    ),
+                                );
                             } else {
                                 setTimeout(poll, 600);
                             }
@@ -220,13 +256,14 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                 setDownloadStage('');
             }, 2000);
         } catch (err: any) {
-            setDownloadError(err.message || 'Terjadi kesalahan saat mengunduh dokumen.');
+            setDownloadError(
+                err.message || 'Terjadi kesalahan saat mengunduh dokumen.',
+            );
             setIsDownloading(false);
             setDownloadProgress(0);
             setDownloadStage('');
         }
     };
-
 
     return (
         <>
@@ -246,11 +283,6 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                 {/* Header */}
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
                     <div className="flex items-center gap-3">
-                        <Link href="/dashboard">
-                            <Button variant="ghost" size="icon" className="size-8">
-                                <ArrowLeft className="size-4" />
-                            </Button>
-                        </Link>
                         <div>
                             <div className="flex items-center gap-2">
                                 <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
@@ -261,7 +293,9 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                 </span>
                             </div>
                             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                                Gabungkan dokumen STNK dan Pajak dari riwayat ke dalam satu file Word (.docx) format A4 Landscape siap cetak.
+                                Gabungkan dokumen STNK dan Pajak dari riwayat ke
+                                dalam satu file Word (.docx) format A4 Landscape
+                                siap cetak.
                             </p>
                         </div>
                     </div>
@@ -280,7 +314,9 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                             ) : (
                                 <>
                                     <Download className="size-4" />
-                                    <span>Download .DOCX ({targetFilename})</span>
+                                    <span>
+                                        Download .DOCX ({targetFilename})
+                                    </span>
                                 </>
                             )}
                         </Button>
@@ -307,9 +343,13 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                             <FileText className="size-4" />
                                         </div>
                                         <div>
-                                            <CardTitle className="text-base">1. Pilih Dokumen STNK</CardTitle>
+                                            <CardTitle className="text-base">
+                                                1. Pilih Dokumen STNK
+                                            </CardTitle>
                                             <CardDescription className="text-xs">
-                                                Akan ditempatkan di Halaman 1 (Belakang STNK) & Halaman 2 (Output STNK)
+                                                Akan ditempatkan di Halaman 1
+                                                (Belakang STNK) & Halaman 2
+                                                (Output STNK)
                                             </CardDescription>
                                         </div>
                                     </div>
@@ -323,7 +363,10 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                 {stnkHistories.length === 0 ? (
                                     <div className="rounded-lg border border-dashed border-neutral-300 p-4 text-center text-sm text-neutral-500 dark:border-neutral-700">
                                         Belum ada riwayat dokumen STNK.{' '}
-                                        <Link href="/documents/create/stnk" className="font-semibold text-emerald-600 underline">
+                                        <Link
+                                            href="/documents/create/stnk"
+                                            className="font-semibold text-emerald-600 underline"
+                                        >
                                             Buat STNK Sekarang
                                         </Link>
                                     </div>
@@ -332,19 +375,25 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                         {/* Search Input STNK */}
                                         <div className="space-y-1.5">
                                             <div className="relative">
-                                                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400" />
+                                                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-neutral-400" />
                                                 <Input
                                                     type="text"
                                                     value={stnkSearch}
-                                                    onChange={(e) => setStnkSearch(e.target.value)}
+                                                    onChange={(e) =>
+                                                        setStnkSearch(
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                     placeholder="Cari nopol / nama pemilik STNK..."
-                                                    className="h-8 pl-8 pr-8 text-xs"
+                                                    className="h-8 pr-8 pl-8 text-xs"
                                                 />
                                                 {stnkSearch && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => setStnkSearch('')}
-                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                                                        onClick={() =>
+                                                            setStnkSearch('')
+                                                        }
+                                                        className="absolute top-1/2 right-2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
                                                     >
                                                         <X className="size-3.5" />
                                                     </button>
@@ -358,68 +407,98 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                                 </span>
                                                 {selectedStnk && (
                                                     <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                                                        Terpilih: {selectedStnk.nopol}
+                                                        Terpilih:{' '}
+                                                        {selectedStnk.nopol}
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
 
-                                        <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                                        <div className="max-h-[260px] space-y-2 overflow-y-auto pr-1">
                                             {/* Option None */}
                                             <div
-                                                onClick={() => setSelectedStnkId(null)}
+                                                onClick={() =>
+                                                    setSelectedStnkId(null)
+                                                }
                                                 className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 text-xs transition-all ${
                                                     selectedStnkId === null
                                                         ? 'border-neutral-900 bg-neutral-900/5 font-semibold text-neutral-900 dark:border-neutral-200 dark:bg-neutral-100/5 dark:text-neutral-100'
                                                         : 'border-sidebar-border text-neutral-500 hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
                                                 }`}
                                             >
-                                                <span>-- Tanpa Dokumen STNK (Kosongkan) --</span>
-                                                {selectedStnkId === null && <Check className="size-4 text-neutral-900 dark:text-neutral-100" />}
+                                                <span>
+                                                    -- Tanpa Dokumen STNK
+                                                    (Kosongkan) --
+                                                </span>
+                                                {selectedStnkId === null && (
+                                                    <Check className="size-4 text-neutral-900 dark:text-neutral-100" />
+                                                )}
                                             </div>
 
-                                            {displayedStnkHistories.length === 0 ? (
+                                            {displayedStnkHistories.length ===
+                                            0 ? (
                                                 <div className="rounded-lg border border-dashed border-neutral-300 p-4 text-center text-xs text-neutral-500 dark:border-neutral-700">
-                                                    Tidak ada dokumen STNK yang cocok dengan kata kunci &quot;{stnkSearch}&quot;.
+                                                    Tidak ada dokumen STNK yang
+                                                    cocok dengan kata kunci
+                                                    &quot;{stnkSearch}&quot;.
                                                 </div>
                                             ) : (
-                                                displayedStnkHistories.map((item) => {
-                                                    const isSelected = selectedStnkId === item.id;
-                                                    return (
-                                                        <div
-                                                            key={item.id}
-                                                            onClick={() => setSelectedStnkId(item.id)}
-                                                            className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all ${
-                                                                isSelected
-                                                                    ? 'border-emerald-600 bg-emerald-50/50 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/20'
-                                                                    : 'border-sidebar-border hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
-                                                            }`}
-                                                        >
-                                                            <div className="flex items-center gap-3">
-                                                                <div
-                                                                    className={`flex size-5 items-center justify-center rounded-full border text-[10px] ${
-                                                                        isSelected
-                                                                            ? 'border-emerald-600 bg-emerald-600 text-white'
-                                                                            : 'border-neutral-300 dark:border-neutral-700'
-                                                                    }`}
-                                                                >
-                                                                    {isSelected && <Check className="size-3" />}
-                                                                </div>
-                                                                <div>
-                                                                    <div className="font-mono text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                                                                        {item.nopol}
+                                                displayedStnkHistories.map(
+                                                    (item) => {
+                                                        const isSelected =
+                                                            selectedStnkId ===
+                                                            item.id;
+                                                        return (
+                                                            <div
+                                                                key={item.id}
+                                                                onClick={() =>
+                                                                    setSelectedStnkId(
+                                                                        item.id,
+                                                                    )
+                                                                }
+                                                                className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all ${
+                                                                    isSelected
+                                                                        ? 'border-emerald-600 bg-emerald-50/50 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/20'
+                                                                        : 'border-sidebar-border hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <div
+                                                                        className={`flex size-5 items-center justify-center rounded-full border text-[10px] ${
+                                                                            isSelected
+                                                                                ? 'border-emerald-600 bg-emerald-600 text-white'
+                                                                                : 'border-neutral-300 dark:border-neutral-700'
+                                                                        }`}
+                                                                    >
+                                                                        {isSelected && (
+                                                                            <Check className="size-3" />
+                                                                        )}
                                                                     </div>
-                                                                    <div className="text-[11px] text-neutral-500">
-                                                                        {item.nama_pemilik} &bull; {item.created_at_human}
+                                                                    <div>
+                                                                        <div className="font-mono text-xs font-bold text-neutral-900 dark:text-neutral-100">
+                                                                            {
+                                                                                item.nopol
+                                                                            }
+                                                                        </div>
+                                                                        <div className="text-[11px] text-neutral-500">
+                                                                            {
+                                                                                item.nama_pemilik
+                                                                            }{' '}
+                                                                            &bull;{' '}
+                                                                            {
+                                                                                item.created_at_human
+                                                                            }
+                                                                        </div>
                                                                     </div>
                                                                 </div>
+                                                                <span className="rounded bg-neutral-100 px-2 py-0.5 font-mono text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                                                                    ID: #
+                                                                    {item.id}
+                                                                </span>
                                                             </div>
-                                                            <span className="rounded bg-neutral-100 px-2 py-0.5 font-mono text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                                                                ID: #{item.id}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })
+                                                        );
+                                                    },
+                                                )
                                             )}
                                         </div>
                                     </>
@@ -436,9 +515,13 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                             <FileSpreadsheet className="size-4" />
                                         </div>
                                         <div>
-                                            <CardTitle className="text-base">2. Pilih Dokumen PAJAK</CardTitle>
+                                            <CardTitle className="text-base">
+                                                2. Pilih Dokumen PAJAK
+                                            </CardTitle>
                                             <CardDescription className="text-xs">
-                                                Akan ditempatkan di Halaman 1 (Belakang PAJAK) & Halaman 2 (Output PAJAK)
+                                                Akan ditempatkan di Halaman 1
+                                                (Belakang PAJAK) & Halaman 2
+                                                (Output PAJAK)
                                             </CardDescription>
                                         </div>
                                     </div>
@@ -452,7 +535,10 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                 {pajakHistories.length === 0 ? (
                                     <div className="rounded-lg border border-dashed border-neutral-300 p-4 text-center text-sm text-neutral-500 dark:border-neutral-700">
                                         Belum ada riwayat dokumen Pajak.{' '}
-                                        <Link href="/documents/create/pajak" className="font-semibold text-amber-600 underline">
+                                        <Link
+                                            href="/documents/create/pajak"
+                                            className="font-semibold text-amber-600 underline"
+                                        >
                                             Buat Pajak Sekarang
                                         </Link>
                                     </div>
@@ -461,19 +547,25 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                         {/* Search Input PAJAK */}
                                         <div className="space-y-1.5">
                                             <div className="relative">
-                                                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400" />
+                                                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-neutral-400" />
                                                 <Input
                                                     type="text"
                                                     value={pajakSearch}
-                                                    onChange={(e) => setPajakSearch(e.target.value)}
+                                                    onChange={(e) =>
+                                                        setPajakSearch(
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                     placeholder="Cari nopol / nama pemilik PAJAK..."
-                                                    className="h-8 pl-8 pr-8 text-xs"
+                                                    className="h-8 pr-8 pl-8 text-xs"
                                                 />
                                                 {pajakSearch && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => setPajakSearch('')}
-                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                                                        onClick={() =>
+                                                            setPajakSearch('')
+                                                        }
+                                                        className="absolute top-1/2 right-2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
                                                     >
                                                         <X className="size-3.5" />
                                                     </button>
@@ -487,68 +579,98 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                                 </span>
                                                 {selectedPajak && (
                                                     <span className="font-medium text-amber-600 dark:text-amber-400">
-                                                        Terpilih: {selectedPajak.nopol}
+                                                        Terpilih:{' '}
+                                                        {selectedPajak.nopol}
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
 
-                                        <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                                        <div className="max-h-[260px] space-y-2 overflow-y-auto pr-1">
                                             {/* Option None */}
                                             <div
-                                                onClick={() => setSelectedPajakId(null)}
+                                                onClick={() =>
+                                                    setSelectedPajakId(null)
+                                                }
                                                 className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 text-xs transition-all ${
                                                     selectedPajakId === null
                                                         ? 'border-neutral-900 bg-neutral-900/5 font-semibold text-neutral-900 dark:border-neutral-200 dark:bg-neutral-100/5 dark:text-neutral-100'
                                                         : 'border-sidebar-border text-neutral-500 hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
                                                 }`}
                                             >
-                                                <span>-- Tanpa Dokumen Pajak (Kosongkan) --</span>
-                                                {selectedPajakId === null && <Check className="size-4 text-neutral-900 dark:text-neutral-100" />}
+                                                <span>
+                                                    -- Tanpa Dokumen Pajak
+                                                    (Kosongkan) --
+                                                </span>
+                                                {selectedPajakId === null && (
+                                                    <Check className="size-4 text-neutral-900 dark:text-neutral-100" />
+                                                )}
                                             </div>
 
-                                            {displayedPajakHistories.length === 0 ? (
+                                            {displayedPajakHistories.length ===
+                                            0 ? (
                                                 <div className="rounded-lg border border-dashed border-neutral-300 p-4 text-center text-xs text-neutral-500 dark:border-neutral-700">
-                                                    Tidak ada dokumen PAJAK yang cocok dengan kata kunci &quot;{pajakSearch}&quot;.
+                                                    Tidak ada dokumen PAJAK yang
+                                                    cocok dengan kata kunci
+                                                    &quot;{pajakSearch}&quot;.
                                                 </div>
                                             ) : (
-                                                displayedPajakHistories.map((item) => {
-                                                    const isSelected = selectedPajakId === item.id;
-                                                    return (
-                                                        <div
-                                                            key={item.id}
-                                                            onClick={() => setSelectedPajakId(item.id)}
-                                                            className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all ${
-                                                                isSelected
-                                                                    ? 'border-amber-600 bg-amber-50/50 shadow-sm dark:border-amber-500 dark:bg-amber-950/20'
-                                                                    : 'border-sidebar-border hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
-                                                            }`}
-                                                        >
-                                                            <div className="flex items-center gap-3">
-                                                                <div
-                                                                    className={`flex size-5 items-center justify-center rounded-full border text-[10px] ${
-                                                                        isSelected
-                                                                            ? 'border-amber-600 bg-amber-600 text-white'
-                                                                            : 'border-neutral-300 dark:border-neutral-700'
-                                                                    }`}
-                                                                >
-                                                                    {isSelected && <Check className="size-3" />}
-                                                                </div>
-                                                                <div>
-                                                                    <div className="font-mono text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                                                                        {item.nopol}
+                                                displayedPajakHistories.map(
+                                                    (item) => {
+                                                        const isSelected =
+                                                            selectedPajakId ===
+                                                            item.id;
+                                                        return (
+                                                            <div
+                                                                key={item.id}
+                                                                onClick={() =>
+                                                                    setSelectedPajakId(
+                                                                        item.id,
+                                                                    )
+                                                                }
+                                                                className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all ${
+                                                                    isSelected
+                                                                        ? 'border-amber-600 bg-amber-50/50 shadow-sm dark:border-amber-500 dark:bg-amber-950/20'
+                                                                        : 'border-sidebar-border hover:border-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <div
+                                                                        className={`flex size-5 items-center justify-center rounded-full border text-[10px] ${
+                                                                            isSelected
+                                                                                ? 'border-amber-600 bg-amber-600 text-white'
+                                                                                : 'border-neutral-300 dark:border-neutral-700'
+                                                                        }`}
+                                                                    >
+                                                                        {isSelected && (
+                                                                            <Check className="size-3" />
+                                                                        )}
                                                                     </div>
-                                                                    <div className="text-[11px] text-neutral-500">
-                                                                        {item.nama_pemilik} &bull; {item.created_at_human}
+                                                                    <div>
+                                                                        <div className="font-mono text-xs font-bold text-neutral-900 dark:text-neutral-100">
+                                                                            {
+                                                                                item.nopol
+                                                                            }
+                                                                        </div>
+                                                                        <div className="text-[11px] text-neutral-500">
+                                                                            {
+                                                                                item.nama_pemilik
+                                                                            }{' '}
+                                                                            &bull;{' '}
+                                                                            {
+                                                                                item.created_at_human
+                                                                            }
+                                                                        </div>
                                                                     </div>
                                                                 </div>
+                                                                <span className="rounded bg-neutral-100 px-2 py-0.5 font-mono text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                                                                    ID: #
+                                                                    {item.id}
+                                                                </span>
                                                             </div>
-                                                            <span className="rounded bg-neutral-100 px-2 py-0.5 font-mono text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                                                                ID: #{item.id}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })
+                                                        );
+                                                    },
+                                                )
                                             )}
                                         </div>
                                     </>
@@ -564,14 +686,17 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <Printer className="size-4 text-neutral-500" />
-                                        <CardTitle className="text-base">Posisi Cetak Word (.docx)</CardTitle>
+                                        <CardTitle className="text-base">
+                                            Posisi Cetak Word (.docx)
+                                        </CardTitle>
                                     </div>
                                     <span className="rounded border px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 dark:text-neutral-300">
                                         Margin: 1.27 cm
                                     </span>
                                 </div>
                                 <CardDescription className="text-xs">
-                                    Spesifikasi koordinat cetak persis sesuai setting dokumen Word
+                                    Spesifikasi koordinat cetak persis sesuai
+                                    setting dokumen Word
                                 </CardDescription>
                             </CardHeader>
 
@@ -582,7 +707,9 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                     <div className="flex flex-col rounded-lg border border-sidebar-border bg-neutral-100/70 p-3 dark:bg-neutral-900/60">
                                         <div className="mb-2 flex items-center justify-between border-b pb-1 text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
                                             <span>HALAMAN 1</span>
-                                            <span className="text-[10px] font-normal text-neutral-500">(Belakang)</span>
+                                            <span className="text-[10px] font-normal text-neutral-500">
+                                                (Belakang)
+                                            </span>
                                         </div>
 
                                         {/* Slot Belakang STNK */}
@@ -593,12 +720,16 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                                     : 'border-dashed border-neutral-300 bg-neutral-50 text-neutral-400 dark:border-neutral-800 dark:bg-neutral-950'
                                             }`}
                                         >
-                                            <div className="text-[11px] font-semibold">Belakang STNK</div>
-                                            <div className="text-[9px] font-mono text-neutral-500">
+                                            <div className="text-[11px] font-semibold">
+                                                Belakang STNK
+                                            </div>
+                                            <div className="font-mono text-[9px] text-neutral-500">
                                                 X: 1.27 cm | Y: 0.00 cm
                                             </div>
                                             <div className="mt-0.5 text-[9px]">
-                                                {selectedStnkId !== null ? '✓ Disertakan' : '- Kosong'}
+                                                {selectedStnkId !== null
+                                                    ? '✓ Disertakan'
+                                                    : '- Kosong'}
                                             </div>
                                         </div>
 
@@ -610,12 +741,16 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                                     : 'border-dashed border-neutral-300 bg-neutral-50 text-neutral-400 dark:border-neutral-800 dark:bg-neutral-950'
                                             }`}
                                         >
-                                            <div className="text-[11px] font-semibold">Belakang PAJAK</div>
-                                            <div className="text-[9px] font-mono text-neutral-500">
+                                            <div className="text-[11px] font-semibold">
+                                                Belakang PAJAK
+                                            </div>
+                                            <div className="font-mono text-[9px] text-neutral-500">
                                                 X: 2.00 cm | Y: 9.53 cm
                                             </div>
                                             <div className="mt-0.5 text-[9px]">
-                                                {selectedPajakId !== null ? '✓ Disertakan' : '- Kosong'}
+                                                {selectedPajakId !== null
+                                                    ? '✓ Disertakan'
+                                                    : '- Kosong'}
                                             </div>
                                         </div>
                                     </div>
@@ -624,7 +759,9 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                     <div className="flex flex-col rounded-lg border border-sidebar-border bg-neutral-100/70 p-3 dark:bg-neutral-900/60">
                                         <div className="mb-2 flex items-center justify-between border-b pb-1 text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
                                             <span>HALAMAN 2</span>
-                                            <span className="text-[10px] font-normal text-neutral-500">(Depan/Output)</span>
+                                            <span className="text-[10px] font-normal text-neutral-500">
+                                                (Depan/Output)
+                                            </span>
                                         </div>
 
                                         {/* Slot Output STNK */}
@@ -635,12 +772,16 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                                     : 'border-dashed border-neutral-300 bg-neutral-50 text-neutral-400 dark:border-neutral-800 dark:bg-neutral-950'
                                             }`}
                                         >
-                                            <div className="text-[11px] font-semibold">Output STNK</div>
-                                            <div className="text-[9px] font-mono text-neutral-500">
+                                            <div className="text-[11px] font-semibold">
+                                                Output STNK
+                                            </div>
+                                            <div className="font-mono text-[9px] text-neutral-500">
                                                 X: 3.51 cm | Y: 1.28 cm
                                             </div>
                                             <div className="mt-0.5 truncate text-[9px] font-medium">
-                                                {selectedStnk ? selectedStnk.nopol : '- Kosong'}
+                                                {selectedStnk
+                                                    ? selectedStnk.nopol
+                                                    : '- Kosong'}
                                             </div>
                                         </div>
 
@@ -652,29 +793,59 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                                     : 'border-dashed border-neutral-300 bg-neutral-50 text-neutral-400 dark:border-neutral-800 dark:bg-neutral-950'
                                             }`}
                                         >
-                                            <div className="text-[11px] font-semibold">Output PAJAK</div>
-                                            <div className="text-[9px] font-mono text-neutral-500">
+                                            <div className="text-[11px] font-semibold">
+                                                Output PAJAK
+                                            </div>
+                                            <div className="font-mono text-[9px] text-neutral-500">
                                                 X: 3.51 cm | Y: 11.54 cm
                                             </div>
                                             <div className="mt-0.5 truncate text-[9px] font-medium">
-                                                {selectedPajak ? selectedPajak.nopol : '- Kosong'}
+                                                {selectedPajak
+                                                    ? selectedPajak.nopol
+                                                    : '- Kosong'}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Coordinate Details Box */}
-                                <div className="rounded-lg border border-sidebar-border bg-neutral-50 p-3 text-xs space-y-2 dark:bg-neutral-900/40">
-                                    <div className="font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+                                <div className="space-y-2 rounded-lg border border-sidebar-border bg-neutral-50 p-3 text-xs dark:bg-neutral-900/40">
+                                    <div className="flex items-center gap-1.5 font-semibold text-neutral-700 dark:text-neutral-300">
                                         <FileCheck className="size-3.5 text-neutral-500" />
                                         <span>Detail Parameter Cetak:</span>
                                     </div>
-                                    <ul className="list-disc pl-4 space-y-1 text-[11px] text-neutral-600 dark:text-neutral-400">
-                                        <li>Kertas: <strong>A4 Landscape (29.7 cm × 21.0 cm)</strong></li>
-                                        <li>Margin: <strong>Narrow (1.27 cm keliling)</strong></li>
-                                        <li>Ukuran Gambar: <strong>Tinggi 7.6 cm (Lock Ratio)</strong> &bull; STNK: 22.37 cm &bull; PAJAK: 21.65 cm</li>
-                                        <li>Posisi gambar terkunci presisi sehingga tidak bergeser saat dicetak.</li>
-                                        <li>Nama file download: <code className="font-mono font-semibold text-neutral-900 dark:text-neutral-100">{targetFilename}</code></li>
+                                    <ul className="list-disc space-y-1 pl-4 text-[11px] text-neutral-600 dark:text-neutral-400">
+                                        <li>
+                                            Kertas:{' '}
+                                            <strong>
+                                                A4 Landscape (29.7 cm × 21.0 cm)
+                                            </strong>
+                                        </li>
+                                        <li>
+                                            Margin:{' '}
+                                            <strong>
+                                                Narrow (1.27 cm keliling)
+                                            </strong>
+                                        </li>
+                                        <li>
+                                            Ukuran Gambar:{' '}
+                                            <strong>
+                                                Tinggi 7.6 cm (Lock Ratio)
+                                            </strong>{' '}
+                                            &bull; STNK: 22.37 cm &bull; PAJAK:
+                                            21.65 cm
+                                        </li>
+                                        <li>
+                                            Posisi gambar terkunci presisi
+                                            sehingga tidak bergeser saat
+                                            dicetak.
+                                        </li>
+                                        <li>
+                                            Nama file download:{' '}
+                                            <code className="font-mono font-semibold text-neutral-900 dark:text-neutral-100">
+                                                {targetFilename}
+                                            </code>
+                                        </li>
                                     </ul>
                                 </div>
 
@@ -692,7 +863,9 @@ export default function MergePage({ stnkHistories = [], pajakHistories = [] }: M
                                     ) : (
                                         <>
                                             <Download className="size-4" />
-                                            <span>Download File Word (.docx)</span>
+                                            <span>
+                                                Download File Word (.docx)
+                                            </span>
                                         </>
                                     )}
                                 </Button>

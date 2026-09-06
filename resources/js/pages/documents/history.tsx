@@ -22,7 +22,6 @@ import { LoadingOverlay } from '@/components/loading-overlay';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     AlertTriangle,
-    ArrowLeft,
     Check,
     Download,
     Eye,

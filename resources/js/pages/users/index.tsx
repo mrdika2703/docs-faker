@@ -15,7 +15,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     AlertCircle,
-    ArrowLeft,
     Eye,
     EyeOff,
     Pencil,
@@ -215,11 +214,6 @@ export default function UsersIndex({ users, filters, currentUserId }: UsersPageP
                 {/* Header Section */}
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
                     <div className="flex items-center gap-3">
-                        <Link href="/dashboard">
-                            <Button variant="ghost" size="icon" className="size-8">
-                                <ArrowLeft className="size-4" />
-                            </Button>
-                        </Link>
                         <div>
                             <div className="flex items-center gap-2">
                                 <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">

@@ -21,7 +21,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { Head, Link, router } from '@inertiajs/react';
 import {
-    ArrowLeft,
     Check,
     CheckCircle2,
     FileSpreadsheet,
@@ -63,7 +62,9 @@ interface TemplateFieldsProps {
     templates: TemplateGroup[];
 }
 
-export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsProps) {
+export default function TemplateFieldsPage({
+    templates = [],
+}: TemplateFieldsProps) {
     // Flatten all fields with template metadata
     const initialFields = useMemo(() => {
         const list: (TemplateFieldItem & { template_name: string })[] = [];
@@ -79,8 +80,14 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
     }, [templates]);
 
     // Local mutable state for editing
-    const [fields, setFields] = useState<(TemplateFieldItem & { template_name: string })[]>(initialFields);
-    const [originalFields, setOriginalFields] = useState<(TemplateFieldItem & { template_name: string })[]>(initialFields);
+    const [fields, setFields] =
+        useState<(TemplateFieldItem & { template_name: string })[]>(
+            initialFields,
+        );
+    const [originalFields, setOriginalFields] =
+        useState<(TemplateFieldItem & { template_name: string })[]>(
+            initialFields,
+        );
 
     // Filters & Active Tab
     const [activeTab, setActiveTab] = useState<'all' | 'STNK' | 'PAJAK'>('all');
@@ -99,8 +106,10 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
         fields.forEach((f) => {
             const original = originalFields.find((orig) => orig.id === f.id);
             if (original) {
-                const defChanged = (f.default_value ?? '') !== (original.default_value ?? '');
-                const maxChanged = Number(f.max_chars) !== Number(original.max_chars);
+                const defChanged =
+                    (f.default_value ?? '') !== (original.default_value ?? '');
+                const maxChanged =
+                    Number(f.max_chars) !== Number(original.max_chars);
                 if (defChanged || maxChanged) {
                     dirty.add(f.id);
                 }
@@ -109,13 +118,22 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
         return dirty;
     }, [fields, originalFields]);
 
-    const handleFieldChange = (id: number, key: 'default_value' | 'max_chars', value: any) => {
+    const handleFieldChange = (
+        id: number,
+        key: 'default_value' | 'max_chars',
+        value: any,
+    ) => {
         setFields((prev) =>
             prev.map((f) => {
                 if (f.id === id) {
                     return {
                         ...f,
-                        [key]: key === 'max_chars' ? (value === '' ? '' : Math.max(1, parseInt(value) || 1)) : value,
+                        [key]:
+                            key === 'max_chars'
+                                ? value === ''
+                                    ? ''
+                                    : Math.max(1, parseInt(value) || 1)
+                                : value,
                     };
                 }
                 return f;
@@ -126,16 +144,23 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
     const handleResetSingleField = (id: number) => {
         const orig = originalFields.find((o) => o.id === id);
         if (orig) {
-            setFields((prev) => prev.map((f) => (f.id === id ? { ...orig } : f)));
+            setFields((prev) =>
+                prev.map((f) => (f.id === id ? { ...orig } : f)),
+            );
             toast.info(`Perubahan pada field '${orig.field_name}' dibatalkan.`);
         }
     };
 
     // Action 1: Save a single field
-    const handleSaveSingle = async (field: TemplateFieldItem & { template_name: string }) => {
+    const handleSaveSingle = async (
+        field: TemplateFieldItem & { template_name: string },
+    ) => {
         setSavingId(field.id);
         try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const token =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') || '';
             const res = await fetch(`/templates/fields/${field.id}`, {
                 method: 'PUT',
                 headers: {
@@ -151,10 +176,15 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
 
             const data = await res.json();
             if (res.ok && data.status === 'success') {
-                toast.success(data.message || `Field '${field.field_name}' berhasil disimpan!`);
+                toast.success(
+                    data.message ||
+                        `Field '${field.field_name}' berhasil disimpan!`,
+                );
                 // Update original snapshot
                 setOriginalFields((prev) =>
-                    prev.map((orig) => (orig.id === field.id ? { ...field } : orig)),
+                    prev.map((orig) =>
+                        orig.id === field.id ? { ...field } : orig,
+                    ),
                 );
             } else {
                 toast.error(data.message || 'Gagal menyimpan field.');
@@ -176,7 +206,10 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
 
         setIsBulkSaving(true);
         try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const token =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') || '';
             const res = await fetch('/templates/fields/bulk-update', {
                 method: 'POST',
                 headers: {
@@ -195,10 +228,14 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
 
             const data = await res.json();
             if (res.ok && data.status === 'success') {
-                toast.success(data.message || 'Semua perubahan berhasil disimpan!');
+                toast.success(
+                    data.message || 'Semua perubahan berhasil disimpan!',
+                );
                 setOriginalFields([...fields]);
             } else {
-                toast.error(data.message || 'Gagal menyimpan perubahan massal.');
+                toast.error(
+                    data.message || 'Gagal menyimpan perubahan massal.',
+                );
             }
         } catch {
             toast.error('Gagal terhubung ke server saat bulk save.');
@@ -211,7 +248,10 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
     const handleResetAllToDefaults = async () => {
         setIsResetting(true);
         try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const token =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') || '';
             const res = await fetch('/templates/fields/reset-defaults', {
                 method: 'POST',
                 headers: {
@@ -223,7 +263,9 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
 
             const data = await res.json();
             if (res.ok && data.status === 'success') {
-                toast.success('Konfigurasi berhasil di-reset ke nilai default bawaan!');
+                toast.success(
+                    'Konfigurasi berhasil di-reset ke nilai default bawaan!',
+                );
                 setResetDialogOpen(false);
                 router.reload();
             } else {
@@ -280,8 +322,13 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
 
             const matchesSearch =
                 searchQuery.trim() === '' ||
-                f.field_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (f.default_value && f.default_value.toLowerCase().includes(searchQuery.toLowerCase()));
+                f.field_name
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase()) ||
+                (f.default_value &&
+                    f.default_value
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()));
 
             const matchesFont =
                 fontFilter === 'all' || f.font_style === fontFilter;
@@ -301,23 +348,26 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                 {/* Page Header */}
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
                     <div className="flex items-center gap-3">
-                        <Link href="/dashboard">
-                            <Button variant="ghost" size="icon" className="size-8">
-                                <ArrowLeft className="size-4" />
-                            </Button>
-                        </Link>
                         <div>
                             <div className="flex items-center gap-2">
                                 <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
                                     Pengaturan Field Dokumen
                                 </h1>
-                                <Badge variant="secondary" className="gap-1 font-mono text-xs">
+                                <Badge
+                                    variant="secondary"
+                                    className="gap-1 font-mono text-xs"
+                                >
                                     <SlidersHorizontal className="size-3" />
                                     {fields.length} Field Database
                                 </Badge>
                             </div>
                             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                                Kelola default value formulir dan batas maksimal panjang karakter (<code className="font-mono text-xs">max_chars</code>) secara dinamis langsung ke database.
+                                Kelola default value formulir dan batas maksimal
+                                panjang karakter (
+                                <code className="font-mono text-xs">
+                                    max_chars
+                                </code>
+                                ) secara dinamis langsung ke database.
                             </p>
                         </div>
                     </div>
@@ -350,7 +400,9 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                             ) : (
                                 <Save className="size-3.5" />
                             )}
-                            Simpan Perubahan {dirtyFieldIds.size > 0 && `(${dirtyFieldIds.size})`}
+                            Simpan Perubahan{' '}
+                            {dirtyFieldIds.size > 0 &&
+                                `(${dirtyFieldIds.size})`}
                         </Button>
                     </div>
                 </div>
@@ -363,10 +415,13 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                             <Button
                                 type="button"
                                 size="sm"
-                                variant={activeTab === 'all' ? 'default' : 'ghost'}
+                                variant={
+                                    activeTab === 'all' ? 'default' : 'ghost'
+                                }
                                 className={cn(
                                     'h-8 text-xs font-medium',
-                                    activeTab === 'all' && 'bg-white shadow-xs dark:bg-neutral-800 dark:text-neutral-100',
+                                    activeTab === 'all' &&
+                                        'bg-white shadow-xs dark:bg-neutral-800 dark:text-neutral-100',
                                 )}
                                 onClick={() => setActiveTab('all')}
                             >
@@ -376,10 +431,13 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                             <Button
                                 type="button"
                                 size="sm"
-                                variant={activeTab === 'STNK' ? 'default' : 'ghost'}
+                                variant={
+                                    activeTab === 'STNK' ? 'default' : 'ghost'
+                                }
                                 className={cn(
                                     'h-8 text-xs font-medium',
-                                    activeTab === 'STNK' && 'bg-white text-emerald-700 shadow-xs dark:bg-neutral-800 dark:text-emerald-400',
+                                    activeTab === 'STNK' &&
+                                        'bg-white text-emerald-700 shadow-xs dark:bg-neutral-800 dark:text-emerald-400',
                                 )}
                                 onClick={() => setActiveTab('STNK')}
                             >
@@ -389,10 +447,13 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                             <Button
                                 type="button"
                                 size="sm"
-                                variant={activeTab === 'PAJAK' ? 'default' : 'ghost'}
+                                variant={
+                                    activeTab === 'PAJAK' ? 'default' : 'ghost'
+                                }
                                 className={cn(
                                     'h-8 text-xs font-medium',
-                                    activeTab === 'PAJAK' && 'bg-white text-amber-700 shadow-xs dark:bg-neutral-800 dark:text-amber-400',
+                                    activeTab === 'PAJAK' &&
+                                        'bg-white text-amber-700 shadow-xs dark:bg-neutral-800 dark:text-amber-400',
                                 )}
                                 onClick={() => setActiveTab('PAJAK')}
                             >
@@ -403,13 +464,15 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
 
                         {/* Search & Font Filter */}
                         <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
-                            <div className="relative min-w-[200px] flex-1 max-w-sm">
-                                <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400" />
+                            <div className="relative max-w-sm min-w-[200px] flex-1">
+                                <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-neutral-400" />
                                 <Input
                                     type="search"
                                     placeholder="Cari field atau default value..."
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) =>
+                                        setSearchQuery(e.target.value)
+                                    }
                                     className="h-8 pl-8 text-xs"
                                 />
                             </div>
@@ -418,14 +481,22 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                                 <Filter className="size-3.5 text-neutral-400" />
                                 <select
                                     value={fontFilter}
-                                    onChange={(e) => setFontFilter(e.target.value)}
-                                    className="h-8 rounded-md border border-input bg-transparent px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring dark:bg-neutral-900"
+                                    onChange={(e) =>
+                                        setFontFilter(e.target.value)
+                                    }
+                                    className="h-8 rounded-md border border-input bg-transparent px-2 text-xs shadow-xs focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none dark:bg-neutral-900"
                                 >
                                     <option value="all">Semua Font</option>
                                     <option value="stnk">Font STNK</option>
-                                    <option value="pajak_bold">Pajak Bold</option>
-                                    <option value="pajak_regular_u">Pajak Reg-U</option>
-                                    <option value="pajak_regular_b">Pajak Reg-B</option>
+                                    <option value="pajak_bold">
+                                        Pajak Bold
+                                    </option>
+                                    <option value="pajak_regular_u">
+                                        Pajak Reg-U
+                                    </option>
+                                    <option value="pajak_regular_b">
+                                        Pajak Reg-B
+                                    </option>
                                 </select>
                             </div>
                         </div>
@@ -440,12 +511,14 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                                 Daftar Field & Limit Karakter
                             </CardTitle>
                             <CardDescription className="text-xs">
-                                Menampilkan {filteredFields.length} field template. Klik dan ubah langsung pada kolom Default Value atau Max Chars.
+                                Menampilkan {filteredFields.length} field
+                                template. Klik dan ubah langsung pada kolom
+                                Default Value atau Max Chars.
                             </CardDescription>
                         </div>
                         {dirtyFieldIds.size > 0 && (
                             <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
-                                <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
+                                <span className="size-2 animate-pulse rounded-full bg-amber-500" />
                                 {dirtyFieldIds.size} field belum disimpan
                             </span>
                         )}
@@ -455,39 +528,62 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                         <div className="overflow-x-auto">
                             <table className="w-full border-collapse text-left text-xs">
                                 <thead>
-                                    <tr className="border-b border-sidebar-border bg-neutral-50/80 dark:bg-neutral-900/50 text-neutral-600 dark:text-neutral-400">
-                                        <th className="py-3 pl-6 pr-4 font-semibold">Template & Nama Field</th>
-                                        <th className="py-3 px-4 font-semibold">Font Style</th>
-                                        <th className="py-3 px-4 font-semibold">Koordinat (X, Y)</th>
-                                        <th className="py-3 px-4 font-semibold min-w-[240px]">Default Input Value</th>
-                                        <th className="py-3 px-4 font-semibold w-36">Max Chars</th>
-                                        <th className="py-3 pl-4 pr-6 text-right font-semibold w-28">Aksi</th>
+                                    <tr className="border-b border-sidebar-border bg-neutral-50/80 text-neutral-600 dark:bg-neutral-900/50 dark:text-neutral-400">
+                                        <th className="py-3 pr-4 pl-6 font-semibold">
+                                            Template & Nama Field
+                                        </th>
+                                        <th className="px-4 py-3 font-semibold">
+                                            Font Style
+                                        </th>
+                                        <th className="px-4 py-3 font-semibold">
+                                            Koordinat (X, Y)
+                                        </th>
+                                        <th className="min-w-[240px] px-4 py-3 font-semibold">
+                                            Default Input Value
+                                        </th>
+                                        <th className="w-36 px-4 py-3 font-semibold">
+                                            Max Chars
+                                        </th>
+                                        <th className="w-28 py-3 pr-6 pl-4 text-right font-semibold">
+                                            Aksi
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-sidebar-border">
                                     {filteredFields.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="py-8 text-center text-neutral-400">
-                                                Tidak ada field yang sesuai dengan kriteria filter.
+                                            <td
+                                                colSpan={6}
+                                                className="py-8 text-center text-neutral-400"
+                                            >
+                                                Tidak ada field yang sesuai
+                                                dengan kriteria filter.
                                             </td>
                                         </tr>
                                     ) : (
                                         filteredFields.map((field) => {
-                                            const isDirty = dirtyFieldIds.has(field.id);
-                                            const isSavingThis = savingId === field.id;
-                                            const fontBadge = getFontBadge(field.font_style);
-                                            const isStnk = field.template_name === 'STNK';
+                                            const isDirty = dirtyFieldIds.has(
+                                                field.id,
+                                            );
+                                            const isSavingThis =
+                                                savingId === field.id;
+                                            const fontBadge = getFontBadge(
+                                                field.font_style,
+                                            );
+                                            const isStnk =
+                                                field.template_name === 'STNK';
 
                                             return (
                                                 <tr
                                                     key={field.id}
                                                     className={cn(
                                                         'transition-colors hover:bg-neutral-50/50 dark:hover:bg-neutral-900/30',
-                                                        isDirty && 'bg-amber-50/30 dark:bg-amber-950/10',
+                                                        isDirty &&
+                                                            'bg-amber-50/30 dark:bg-amber-950/10',
                                                     )}
                                                 >
                                                     {/* Template & Name */}
-                                                    <td className="py-3.5 pl-6 pr-4 align-middle">
+                                                    <td className="py-3.5 pr-4 pl-6 align-middle">
                                                         <div className="flex items-center gap-2">
                                                             <Badge
                                                                 variant="outline"
@@ -498,13 +594,17 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                                                                         : 'border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-400',
                                                                 )}
                                                             >
-                                                                {field.template_name}
+                                                                {
+                                                                    field.template_name
+                                                                }
                                                             </Badge>
                                                             <span className="font-mono font-semibold text-neutral-900 dark:text-neutral-100">
-                                                                {field.field_name}
+                                                                {
+                                                                    field.field_name
+                                                                }
                                                             </span>
                                                             {isDirty && (
-                                                                <span className="rounded bg-amber-100 px-1 py-0.2 text-[9px] font-bold text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                                                <span className="py-0.2 rounded bg-amber-100 px-1 text-[9px] font-bold text-amber-800 dark:bg-amber-900 dark:text-amber-200">
                                                                     DIEDIT
                                                                 </span>
                                                             )}
@@ -512,57 +612,84 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                                                     </td>
 
                                                     {/* Font Style */}
-                                                    <td className="py-3.5 px-4 align-middle">
-                                                        <span className={cn('rounded border px-2 py-0.5 text-[10px] font-semibold inline-block', fontBadge.className)}>
+                                                    <td className="px-4 py-3.5 align-middle">
+                                                        <span
+                                                            className={cn(
+                                                                'inline-block rounded border px-2 py-0.5 text-[10px] font-semibold',
+                                                                fontBadge.className,
+                                                            )}
+                                                        >
                                                             {fontBadge.label}
                                                         </span>
                                                     </td>
 
                                                     {/* Coordinates */}
-                                                    <td className="py-3.5 px-4 align-middle font-mono text-[11px] text-neutral-500">
-                                                        X: {field.start_x}, Y: {field.start_y}
+                                                    <td className="px-4 py-3.5 align-middle font-mono text-[11px] text-neutral-500">
+                                                        X: {field.start_x}, Y:{' '}
+                                                        {field.start_y}
                                                     </td>
 
                                                     {/* Default Value Input */}
-                                                    <td className="py-3.5 px-4 align-middle">
+                                                    <td className="px-4 py-3.5 align-middle">
                                                         <Input
-                                                            value={field.default_value ?? ''}
-                                                            maxLength={Number(field.max_chars) || 500}
+                                                            value={
+                                                                field.default_value ??
+                                                                ''
+                                                            }
+                                                            maxLength={
+                                                                Number(
+                                                                    field.max_chars,
+                                                                ) || 500
+                                                            }
                                                             onChange={(e) =>
-                                                                handleFieldChange(field.id, 'default_value', e.target.value)
+                                                                handleFieldChange(
+                                                                    field.id,
+                                                                    'default_value',
+                                                                    e.target
+                                                                        .value,
+                                                                )
                                                             }
                                                             placeholder="Kosong (tidak ada default)..."
                                                             className={cn(
                                                                 'h-8 font-mono text-xs',
-                                                                isDirty && 'border-amber-400 ring-1 ring-amber-400/30 dark:border-amber-700',
+                                                                isDirty &&
+                                                                    'border-amber-400 ring-1 ring-amber-400/30 dark:border-amber-700',
                                                             )}
                                                         />
                                                     </td>
 
                                                     {/* Max Chars Input */}
-                                                    <td className="py-3.5 px-4 align-middle">
+                                                    <td className="px-4 py-3.5 align-middle">
                                                         <div className="flex items-center gap-1.5">
                                                             <Input
                                                                 type="number"
                                                                 min={1}
                                                                 max={500}
-                                                                value={field.max_chars}
+                                                                value={
+                                                                    field.max_chars
+                                                                }
                                                                 onChange={(e) =>
-                                                                    handleFieldChange(field.id, 'max_chars', e.target.value)
+                                                                    handleFieldChange(
+                                                                        field.id,
+                                                                        'max_chars',
+                                                                        e.target
+                                                                            .value,
+                                                                    )
                                                                 }
                                                                 className={cn(
-                                                                    'h-8 w-20 font-mono text-xs font-semibold text-center',
-                                                                    isDirty && 'border-amber-400 ring-1 ring-amber-400/30 dark:border-amber-700',
+                                                                    'h-8 w-20 text-center font-mono text-xs font-semibold',
+                                                                    isDirty &&
+                                                                        'border-amber-400 ring-1 ring-amber-400/30 dark:border-amber-700',
                                                                 )}
                                                             />
-                                                            <span className="text-[10px] text-neutral-400 font-mono">
+                                                            <span className="font-mono text-[10px] text-neutral-400">
                                                                 karakter
                                                             </span>
                                                         </div>
                                                     </td>
 
                                                     {/* Actions */}
-                                                    <td className="py-3.5 pl-4 pr-6 text-right align-middle">
+                                                    <td className="py-3.5 pr-6 pl-4 text-right align-middle">
                                                         <div className="flex items-center justify-end gap-1">
                                                             {isDirty && (
                                                                 <Button
@@ -570,25 +697,41 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                                                                     size="icon"
                                                                     className="size-7 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
                                                                     title="Batal edit baris ini"
-                                                                    onClick={() => handleResetSingleField(field.id)}
+                                                                    onClick={() =>
+                                                                        handleResetSingleField(
+                                                                            field.id,
+                                                                        )
+                                                                    }
                                                                 >
                                                                     <RotateCcw className="size-3.5" />
                                                                 </Button>
                                                             )}
                                                             <Button
-                                                                variant={isDirty ? 'default' : 'outline'}
+                                                                variant={
+                                                                    isDirty
+                                                                        ? 'default'
+                                                                        : 'outline'
+                                                                }
                                                                 size="sm"
                                                                 className={cn(
                                                                     'h-7 px-2 text-[11px]',
-                                                                    isDirty && 'bg-emerald-600 hover:bg-emerald-700 text-white',
+                                                                    isDirty &&
+                                                                        'bg-emerald-600 text-white hover:bg-emerald-700',
                                                                 )}
-                                                                disabled={!isDirty || isSavingThis}
-                                                                onClick={() => handleSaveSingle(field)}
+                                                                disabled={
+                                                                    !isDirty ||
+                                                                    isSavingThis
+                                                                }
+                                                                onClick={() =>
+                                                                    handleSaveSingle(
+                                                                        field,
+                                                                    )
+                                                                }
                                                             >
                                                                 {isSavingThis ? (
                                                                     <Spinner className="size-3" />
                                                                 ) : (
-                                                                    <Save className="size-3 mr-1" />
+                                                                    <Save className="mr-1 size-3" />
                                                                 )}
                                                                 Simpan
                                                             </Button>
@@ -614,8 +757,11 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                             Reset ke Konfigurasi Default Bawaan?
                         </DialogTitle>
                         <DialogDescription className="text-xs">
-                            Tindakan ini akan mengembalikan seluruh <strong>Default Value</strong> dan <strong>Max Chars</strong> dari template STNK & PAJAK ke nilai konfigurasi seeder awal.
-                            Semua perubahan kustom Anda akan ditimpa.
+                            Tindakan ini akan mengembalikan seluruh{' '}
+                            <strong>Default Value</strong> dan{' '}
+                            <strong>Max Chars</strong> dari template STNK &
+                            PAJAK ke nilai konfigurasi seeder awal. Semua
+                            perubahan kustom Anda akan ditimpa.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="gap-2 sm:justify-end">
@@ -634,7 +780,11 @@ export default function TemplateFieldsPage({ templates = [] }: TemplateFieldsPro
                             disabled={isResetting}
                             className="gap-1.5"
                         >
-                            {isResetting ? <Spinner className="size-3.5" /> : <RotateCcw className="size-3.5" />}
+                            {isResetting ? (
+                                <Spinner className="size-3.5" />
+                            ) : (
+                                <RotateCcw className="size-3.5" />
+                            )}
                             Ya, Reset Sekarang
                         </Button>
                     </DialogFooter>

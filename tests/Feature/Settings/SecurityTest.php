@@ -115,4 +115,42 @@ class SecurityTest extends TestCase
             ->assertSessionHasErrors('current_password')
             ->assertRedirect(route('security.edit'));
     }
+
+    public function test_password_can_be_updated_with_six_characters(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('security.edit'))
+            ->put(route('user-password.update'), [
+                'current_password' => 'password',
+                'password' => '123456',
+                'password_confirmation' => '123456',
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('security.edit'));
+
+        $this->assertTrue(Hash::check('123456', $user->refresh()->password));
+    }
+
+    public function test_password_cannot_be_updated_with_less_than_six_characters(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('security.edit'))
+            ->put(route('user-password.update'), [
+                'current_password' => 'password',
+                'password' => '12345',
+                'password_confirmation' => '12345',
+            ]);
+
+        $response
+            ->assertSessionHasErrors('password')
+            ->assertRedirect(route('security.edit'));
+    }
 }

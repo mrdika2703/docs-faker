@@ -13,8 +13,6 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Head, Link } from '@inertiajs/react';
 import {
-    ArrowLeft,
-    CheckCircle2,
     Download,
     Eye,
     FileSpreadsheet,
@@ -636,7 +634,7 @@ export default function CreateCombinedPage({
                                                     Nomor Polisi (Nopol)
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
-                                                    {val.length}/{max} (Bold)
+                                                    {val.length}/{max}
                                                 </span>
                                             </div>
                                             <Input
@@ -669,7 +667,7 @@ export default function CreateCombinedPage({
                                                     Nama Pemilik
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
-                                                    {val.length}/{max} (Reg-U)
+                                                    {val.length}/{max}
                                                 </span>
                                             </div>
                                             <Input
@@ -702,7 +700,7 @@ export default function CreateCombinedPage({
                                                     Jenis Kendaraan
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
-                                                    {val.length}/{max} (Reg-B)
+                                                    {val.length}/{max}
                                                 </span>
                                             </div>
                                             <Input
@@ -735,7 +733,7 @@ export default function CreateCombinedPage({
                                                     Model
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
-                                                    {val.length}/{max} (Reg-B)
+                                                    {val.length}/{max}
                                                 </span>
                                             </div>
                                             <Input
@@ -768,7 +766,7 @@ export default function CreateCombinedPage({
                                                     Nomor Rangka
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
-                                                    {val.length}/{max} (Reg-B)
+                                                    {val.length}/{max}
                                                 </span>
                                             </div>
                                             <Input
@@ -801,7 +799,7 @@ export default function CreateCombinedPage({
                                                     Nomor Mesin
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
-                                                    {val.length}/{max} (Reg-B)
+                                                    {val.length}/{max}
                                                 </span>
                                             </div>
                                             <Input
@@ -834,7 +832,7 @@ export default function CreateCombinedPage({
                                                     Warna
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-blue-600 dark:text-blue-400')}>
-                                                    {val.length}/{max} (Reg-B)
+                                                    {val.length}/{max}
                                                 </span>
                                             </div>
                                             <Input
@@ -1324,7 +1322,7 @@ export default function CreateCombinedPage({
                                                     htmlFor="pajak_alamat1"
                                                     className="text-xs font-semibold"
                                                 >
-                                                    Alamat 1 (Reg-U)
+                                                    Alamat 1
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
                                                     {val.length}/{max}
@@ -1357,7 +1355,7 @@ export default function CreateCombinedPage({
                                                     htmlFor="pajak_alamat2"
                                                     className="text-xs font-semibold"
                                                 >
-                                                    Alamat 2 (Reg-U)
+                                                    Alamat 2
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
                                                     {val.length}/{max}
@@ -1390,7 +1388,7 @@ export default function CreateCombinedPage({
                                                     htmlFor="pajak_alamat3"
                                                     className="text-xs font-semibold"
                                                 >
-                                                    Alamat 3 (Reg-U)
+                                                    Alamat 3
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
                                                     {val.length}/{max}
@@ -1423,7 +1421,7 @@ export default function CreateCombinedPage({
                                                     htmlFor="pajak_merk"
                                                     className="text-xs font-semibold"
                                                 >
-                                                    Merk / Type (Reg-B)
+                                                    Merk / Type
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
                                                     {val.length}/{max}
@@ -1456,7 +1454,7 @@ export default function CreateCombinedPage({
                                                     htmlFor="pajak_tahun_cc"
                                                     className="text-xs font-semibold"
                                                 >
-                                                    Tahun / CC (Reg-B)
+                                                    Tahun / CC
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
                                                     {val.length}/{max}
@@ -1489,7 +1487,7 @@ export default function CreateCombinedPage({
                                                     htmlFor="pajak_tanggal_faktur"
                                                     className="text-xs font-semibold"
                                                 >
-                                                    Tanggal Faktur (Reg-B)
+                                                    Tanggal Faktur
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
                                                     {val.length}/{max}
@@ -1522,7 +1520,7 @@ export default function CreateCombinedPage({
                                                     htmlFor="pajak_tanggal_pajak"
                                                     className="text-xs font-semibold"
                                                 >
-                                                    Tanggal Pajak (Bold)
+                                                    Tanggal Pajak
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-purple-600 dark:text-purple-400')}>
                                                     {val.length}/{max}
@@ -1555,7 +1553,7 @@ export default function CreateCombinedPage({
                                                     htmlFor="pajak_nopol_lama"
                                                     className="text-xs font-semibold"
                                                 >
-                                                    Nopol Lama (Reg-B)
+                                                    Nopol Lama
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
                                                     {val.length}/{max}
@@ -1588,7 +1586,7 @@ export default function CreateCombinedPage({
                                                     htmlFor="pajak_tanggal_bayar"
                                                     className="text-xs font-semibold"
                                                 >
-                                                    Tanggal Bayar Pajak (Reg-B)
+                                                    Tanggal Bayar Pajak
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
                                                     {val.length}/{max}
@@ -1621,7 +1619,7 @@ export default function CreateCombinedPage({
                                                     htmlFor="pajak_tahun_bayar"
                                                     className="text-xs font-semibold"
                                                 >
-                                                    Tahun Bayar (Reg-B)
+                                                    Tahun Bayar
                                                 </Label>
                                                 <span className={cn('font-mono text-[10px]', val.length >= max ? 'font-semibold text-amber-600' : 'text-neutral-400')}>
                                                     {val.length}/{max}

@@ -123,4 +123,36 @@ class UserManagementTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseHas('users', ['id' => $this->admin->id]);
     }
+
+    public function test_admin_can_create_user_with_six_character_password(): void
+    {
+        $response = $this->actingAs($this->admin)->post('/users', [
+            'name' => 'Six Char Admin User',
+            'email' => 'admin_sixchars@example.com',
+            'role' => 'user',
+            'password' => '123456',
+            'password_confirmation' => '123456',
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('users', [
+            'email' => 'admin_sixchars@example.com',
+        ]);
+    }
+
+    public function test_admin_cannot_create_user_with_less_than_six_character_password(): void
+    {
+        $response = $this->actingAs($this->admin)->post('/users', [
+            'name' => 'Five Char Admin User',
+            'email' => 'admin_fivechars@example.com',
+            'role' => 'user',
+            'password' => '12345',
+            'password_confirmation' => '12345',
+        ]);
+
+        $response->assertSessionHasErrors('password');
+        $this->assertDatabaseMissing('users', [
+            'email' => 'admin_fivechars@example.com',
+        ]);
+    }
 }
