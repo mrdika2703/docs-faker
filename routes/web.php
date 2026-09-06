@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 Route::redirect('/', '/login')->name('home');
 Route::get('ping', fn () => response()->noContent())->name('ping');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Document routes
