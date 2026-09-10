@@ -15,11 +15,17 @@ Route::middleware(['auth'])->group(function () {
     Route::post('documents/combined/preview', [DocumentController::class, 'previewCombined'])->name('documents.combined.preview');
     Route::post('documents/combined/store', [DocumentController::class, 'storeCombined'])->name('documents.combined.store');
     Route::post('documents/combined/generate-word', [DocumentController::class, 'generateWordCombined'])->name('documents.combined.generate-word');
+    Route::post('documents/combined/prepare-word', [DocumentController::class, 'prepareCombinedWordJob'])->name('documents.combined.prepare-word');
+    Route::get('documents/combined/status-word/{jobId}', [DocumentController::class, 'statusCombinedWordJob'])->name('documents.combined.status-word');
+    Route::get('documents/combined/download-word/{jobId}', [DocumentController::class, 'downloadCombinedWordJob'])->name('documents.combined.download-word');
     Route::get('documents/create/{template?}', [DocumentController::class, 'create'])->name('documents.create');
     Route::get('templates/{template}/background', [DocumentController::class, 'previewBackground'])->name('templates.background');
     Route::post('documents/preview', [DocumentController::class, 'preview'])->name('documents.preview');
     Route::post('documents/store', [DocumentController::class, 'store'])->name('documents.store');
     Route::post('documents/generate', [DocumentController::class, 'generate'])->name('documents.generate');
+    Route::post('documents/prepare', [DocumentController::class, 'prepareDocumentJob'])->name('documents.prepare');
+    Route::get('documents/status/{jobId}', [DocumentController::class, 'statusDocumentJob'])->name('documents.status');
+    Route::get('documents/download-file/{jobId}', [DocumentController::class, 'downloadDocumentJob'])->name('documents.download-file');
 
     // History routes
     Route::get('documents/history', [DocumentController::class, 'history'])->name('documents.history');

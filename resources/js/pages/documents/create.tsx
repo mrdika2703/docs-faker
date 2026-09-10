@@ -240,11 +240,11 @@ export default function CreateDocument({
         }
     };
 
-    // Action 3: Save JSON to DB & Download rendered PNG
+    // Action 3: Save JSON to DB & Download rendered PNG (Hybrid: Prepare -> Status -> Native Browser Download)
     const handleSaveAndDownload = async () => {
         if (!selectedTemplate) return;
         setIsGenerating(true);
-        setGenerateProgress(20);
+        setGenerateProgress(15);
         setGenerateStage('Menyimpan data payload ke history...');
 
         try {
@@ -253,15 +253,16 @@ export default function CreateDocument({
                     .querySelector('meta[name="csrf-token"]')
                     ?.getAttribute('content') || '';
 
-            setGenerateProgress(70);
-            setGenerateStage(`Membuat file ${selectedTemplate.name}...`);
+            // Tahap 1: Prepare job di server (render PNG & simpan file temp)
+            setGenerateProgress(30);
+            setGenerateStage(`Merender dokumen ${selectedTemplate.name}...`);
 
-            const res = await fetch('/documents/generate', {
+            const prepareRes = await fetch('/documents/prepare', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Accept: 'image/png, application/json',
                     'X-CSRF-TOKEN': token,
+                    Accept: 'application/json',
                 },
                 body: JSON.stringify({
                     template_id: selectedTemplate.id,
@@ -269,28 +270,71 @@ export default function CreateDocument({
                 }),
             });
 
-            if (!res.ok) {
-                throw new Error('Failed to generate document');
+            if (!prepareRes.ok) {
+                const errData = await prepareRes.json().catch(() => ({}));
+                throw new Error(errData.message || 'Gagal menyiapkan dokumen.');
             }
 
-            const blob = await res.blob();
-            setGenerateProgress(100);
+            const prepareData = await prepareRes.json();
+            const jobId: string = prepareData.job_id;
+
+            setGenerateProgress(70);
+            setGenerateStage('Menyiapkan file unduhan...');
+
+            // Tahap 2: Polling status sampai file siap di disk server
+            let attempts = 0;
+            const maxAttempts = 20;
+            await new Promise<void>((resolve, reject) => {
+                const poll = () => {
+                    attempts++;
+                    const prog = Math.min(
+                        70 + Math.floor((attempts / maxAttempts) * 25),
+                        94,
+                    );
+                    setGenerateProgress(prog);
+
+                    fetch(`/documents/status/${jobId}`, {
+                        headers: { Accept: 'application/json' },
+                    })
+                        .then((r) => r.json())
+                        .then((data) => {
+                            if (data.status === 'ready') {
+                                resolve();
+                            } else if (attempts >= maxAttempts) {
+                                reject(new Error('Timeout: file dokumen tidak kunjung siap.'));
+                            } else {
+                                setTimeout(poll, 400);
+                            }
+                        })
+                        .catch(() => {
+                            if (attempts >= maxAttempts) {
+                                reject(new Error('Gagal memeriksa status dokumen.'));
+                            } else {
+                                setTimeout(poll, 400);
+                            }
+                        });
+                };
+                poll();
+            });
+
+            // Tahap 3: Trigger native browser download via window.location
+            setGenerateProgress(98);
             setGenerateStage('File PNG siap! Membuka unduhan...');
 
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = `doc-${selectedTemplate.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.png`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(downloadUrl);
-            document.body.removeChild(a);
+            window.location.href = `/documents/download-file/${jobId}`;
 
-            toast.success('Document saved & downloaded successfully!');
+            toast.success('Dokumen berhasil disimpan & diunduh!');
+
+            setTimeout(() => {
+                setIsGenerating(false);
+                setGenerateProgress(0);
+                setGenerateStage('');
+            }, 2000);
         } catch (err: any) {
-            toast.error(err.message || 'Failed to save and generate document.');
-        } finally {
+            toast.error(err.message || 'Gagal menyimpan dan membuat dokumen.');
             setIsGenerating(false);
+            setGenerateProgress(0);
+            setGenerateStage('');
         }
     };
 

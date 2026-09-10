@@ -197,6 +197,96 @@ class DocumentController extends Controller
     }
 
     /**
+     * Prepare a single document job: render PNG, save to temp storage, return job_id.
+     */
+    public function prepareDocumentJob(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'template_id' => ['required', 'exists:templates,id'],
+            'input_data' => ['required', 'array'],
+        ]);
+
+        $template = Template::findOrFail($validated['template_id']);
+        $user = $request->user();
+
+        // Save JSON to document_histories
+        $history = $user->documentHistories()->create([
+            'template_id' => $template->id,
+            'input_data' => $validated['input_data'],
+        ]);
+
+        // Render PNG
+        $binary = $this->imageService->renderImage($template, $validated['input_data']);
+        $filename = 'doc-'.Str::slug($template->name).'-'.now()->format('Ymd-His').'.png';
+
+        $jobId = Str::uuid()->toString();
+        $dir = storage_path('app/document-jobs');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        file_put_contents($dir.'/'.$jobId.'.png', $binary);
+        file_put_contents($dir.'/'.$jobId.'.meta', $filename);
+
+        return response()->json([
+            'status' => 'ready',
+            'job_id' => $jobId,
+            'filename' => $filename,
+            'history_id' => $history->id,
+        ]);
+    }
+
+    /**
+     * Check status of a single document job.
+     */
+    public function statusDocumentJob(string $jobId): JsonResponse
+    {
+        if (! preg_match('/^[0-9a-f\-]{36}$/', $jobId)) {
+            return response()->json(['status' => 'not_found'], 404);
+        }
+
+        $path = storage_path('app/document-jobs/'.$jobId.'.png');
+
+        if (file_exists($path)) {
+            return response()->json(['status' => 'ready']);
+        }
+
+        return response()->json(['status' => 'not_found'], 404);
+    }
+
+    /**
+     * Stream and deliver the prepared document PNG file, then delete temp files.
+     */
+    public function downloadDocumentJob(string $jobId): HttpResponse
+    {
+        if (! preg_match('/^[0-9a-f\-]{36}$/', $jobId)) {
+            abort(SymfonyResponse::HTTP_NOT_FOUND, 'Job tidak ditemukan.');
+        }
+
+        $dir = storage_path('app/document-jobs');
+        $filePath = $dir.'/'.$jobId.'.png';
+        $metaPath = $dir.'/'.$jobId.'.meta';
+
+        if (! file_exists($filePath)) {
+            abort(SymfonyResponse::HTTP_NOT_FOUND, 'File dokumen tidak ditemukan atau sudah kadaluarsa.');
+        }
+
+        $filename = file_exists($metaPath) ? trim(file_get_contents($metaPath)) : 'document.png';
+        $binary = file_get_contents($filePath);
+        $size = strlen($binary);
+
+        @unlink($filePath);
+        @unlink($metaPath);
+
+        return response($binary, SymfonyResponse::HTTP_OK, [
+            'Content-Type' => 'image/png',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Length' => $size,
+            'Cache-Control' => 'no-cache, private',
+        ]);
+    }
+
+    /**
      * Display document generation history list.
      */
     public function history(Request $request): Response
@@ -652,6 +742,108 @@ class DocumentController extends Controller
         return response($docxBinary, SymfonyResponse::HTTP_OK, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Cache-Control' => 'no-cache, private',
+        ]);
+    }
+
+    /**
+     * Prepare combined STNK & PAJAK Word docx job: save to DB, render PNGs & DOCX, store in temp, return job_id.
+     */
+    public function prepareCombinedWordJob(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'input_data' => ['required', 'array'],
+        ]);
+
+        $stnkTemplate = Template::where('name', 'STNK')->firstOrFail();
+        $pajakTemplate = Template::where('name', 'PAJAK')->firstOrFail();
+
+        $parsed = $this->parseCombinedInput($validated['input_data']);
+        $user = $request->user();
+
+        $stnkHistory = $user->documentHistories()->create([
+            'template_id' => $stnkTemplate->id,
+            'input_data' => $parsed['stnk'],
+        ]);
+
+        $pajakHistory = $user->documentHistories()->create([
+            'template_id' => $pajakTemplate->id,
+            'input_data' => $parsed['pajak'],
+        ]);
+
+        $stnkPng = $this->imageService->renderImage($stnkTemplate, $parsed['stnk']);
+        $pajakPng = $this->imageService->renderImage($pajakTemplate, $parsed['pajak']);
+
+        $docxBinary = $this->wordService->generateDocx($stnkPng, $pajakPng);
+
+        $nopol = $parsed['stnk']['nopol'] ?? $parsed['pajak']['nopol'] ?? 'DOKUMEN';
+        $safeNopol = Str::slug(str_replace(' ', '_', (string) $nopol), '_');
+        $filename = strtoupper($safeNopol).'.docx';
+
+        $jobId = Str::uuid()->toString();
+        $dir = storage_path('app/combined-jobs');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        file_put_contents($dir.'/'.$jobId.'.docx', $docxBinary);
+        file_put_contents($dir.'/'.$jobId.'.meta', $filename);
+
+        return response()->json([
+            'status' => 'ready',
+            'job_id' => $jobId,
+            'filename' => $filename,
+            'stnk_history_id' => $stnkHistory->id,
+            'pajak_history_id' => $pajakHistory->id,
+        ]);
+    }
+
+    /**
+     * Check status of combined Word docx job.
+     */
+    public function statusCombinedWordJob(string $jobId): JsonResponse
+    {
+        if (! preg_match('/^[0-9a-f\-]{36}$/', $jobId)) {
+            return response()->json(['status' => 'not_found'], 404);
+        }
+
+        $path = storage_path('app/combined-jobs/'.$jobId.'.docx');
+
+        if (file_exists($path)) {
+            return response()->json(['status' => 'ready']);
+        }
+
+        return response()->json(['status' => 'not_found'], 404);
+    }
+
+    /**
+     * Stream and deliver the prepared combined Word DOCX file, then delete temp files.
+     */
+    public function downloadCombinedWordJob(string $jobId): HttpResponse
+    {
+        if (! preg_match('/^[0-9a-f\-]{36}$/', $jobId)) {
+            abort(SymfonyResponse::HTTP_NOT_FOUND, 'Job tidak ditemukan.');
+        }
+
+        $dir = storage_path('app/combined-jobs');
+        $docxPath = $dir.'/'.$jobId.'.docx';
+        $metaPath = $dir.'/'.$jobId.'.meta';
+
+        if (! file_exists($docxPath)) {
+            abort(SymfonyResponse::HTTP_NOT_FOUND, 'File dokumen tidak ditemukan atau sudah kadaluarsa.');
+        }
+
+        $filename = file_exists($metaPath) ? trim(file_get_contents($metaPath)) : 'DOKUMEN.docx';
+        $binary = file_get_contents($docxPath);
+        $size = strlen($binary);
+
+        @unlink($docxPath);
+        @unlink($metaPath);
+
+        return response($binary, SymfonyResponse::HTTP_OK, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Length' => $size,
             'Cache-Control' => 'no-cache, private',
         ]);
     }

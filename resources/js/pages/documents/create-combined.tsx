@@ -344,58 +344,99 @@ export default function CreateCombinedPage({
         }
     };
 
-    // Action 3: Save to DB & Download Word Document with real progress
+    // Action 3: Save to DB & Download Word Document (Hybrid: Prepare -> Status -> Native Browser Download)
     const handleGenerateWord = async () => {
         setIsGeneratingWord(true);
         setWordProgress(15);
         setWordStage('Menyimpan data STNK & PAJAK ke history...');
 
         try {
-            const token = document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content') || '';
+            const token =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') || '';
 
+            // Tahap 1: Prepare job di server (render gambar STNK & PAJAK + susun DOCX temp)
             setWordProgress(35);
             setWordStage('Merender gambar & menyusun 2 Halaman Word A4 Landscape...');
 
-            const res = await fetch('/documents/combined/generate-word', {
+            const prepareRes = await fetch('/documents/combined/prepare-word', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                     'X-CSRF-TOKEN': token,
+                    Accept: 'application/json',
                 },
                 body: JSON.stringify({
                     input_data: formData,
                 }),
             });
 
-            if (!res.ok) {
-                throw new Error('Gagal membuat dokumen Word.');
+            if (!prepareRes.ok) {
+                const errData = await prepareRes.json().catch(() => ({}));
+                throw new Error(errData.message || 'Gagal menyiapkan dokumen Word.');
             }
 
-            setWordProgress(80);
-            setWordStage('Menerima payload file dokumen Word (.docx)...');
+            const prepareData = await prepareRes.json();
+            const jobId: string = prepareData.job_id;
 
-            const blob = await res.blob();
-            setWordProgress(100);
+            setWordProgress(70);
+            setWordStage('Menyusun dokumen Word...');
+
+            // Tahap 2: Polling status sampai file DOCX siap di disk server
+            let attempts = 0;
+            const maxAttempts = 25;
+            await new Promise<void>((resolve, reject) => {
+                const poll = () => {
+                    attempts++;
+                    const prog = Math.min(
+                        70 + Math.floor((attempts / maxAttempts) * 25),
+                        94,
+                    );
+                    setWordProgress(prog);
+
+                    fetch(`/documents/combined/status-word/${jobId}`, {
+                        headers: { Accept: 'application/json' },
+                    })
+                        .then((r) => r.json())
+                        .then((data) => {
+                            if (data.status === 'ready') {
+                                resolve();
+                            } else if (attempts >= maxAttempts) {
+                                reject(new Error('Timeout: file dokumen Word tidak kunjung siap.'));
+                            } else {
+                                setTimeout(poll, 400);
+                            }
+                        })
+                        .catch(() => {
+                            if (attempts >= maxAttempts) {
+                                reject(new Error('Gagal memeriksa status dokumen Word.'));
+                            } else {
+                                setTimeout(poll, 400);
+                            }
+                        });
+                };
+                poll();
+            });
+
+            // Tahap 3: Trigger native browser download via window.location
+            setWordProgress(98);
             setWordStage('File siap! Membuka unduhan...');
 
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            const targetNopol = formData.nopol || 'DOKUMEN';
-            a.download = `${targetNopol.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}.docx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(downloadUrl);
-            document.body.removeChild(a);
+            window.location.href = `/documents/combined/download-word/${jobId}`;
 
             toast.success('Dokumen Word (.docx) berhasil disimpan & diunduh!');
+
+            setTimeout(() => {
+                setIsGeneratingWord(false);
+                setWordProgress(0);
+                setWordStage('');
+            }, 2000);
         } catch (err: any) {
             toast.error(err.message || 'Gagal menyimpan & mengunduh dokumen Word.');
-        } finally {
             setIsGeneratingWord(false);
+            setWordProgress(0);
+            setWordStage('');
         }
     };
 
