@@ -244,8 +244,27 @@ export default function CreateDocument({
     const handleSaveAndDownload = async () => {
         if (!selectedTemplate) return;
         setIsGenerating(true);
-        setGenerateProgress(15);
+        setGenerateProgress(10);
         setGenerateStage('Menyimpan data payload ke history...');
+
+        // Progress timer agar loading bar bergerak mulus selama proses render di server
+        let currentProgress = 10;
+        const progressTimer = setInterval(() => {
+            if (currentProgress < 85) {
+                const diff = 85 - currentProgress;
+                const increment = Math.max(1, Math.round(diff * 0.08));
+                currentProgress = Math.min(currentProgress + increment, 85);
+                setGenerateProgress(currentProgress);
+
+                if (currentProgress < 35) {
+                    setGenerateStage('Menyimpan data payload ke history...');
+                } else if (currentProgress < 65) {
+                    setGenerateStage(`Merender dokumen ${selectedTemplate.name}...`);
+                } else {
+                    setGenerateStage('Menyiapkan file unduhan...');
+                }
+            }
+        }, 120);
 
         try {
             const token =
@@ -254,9 +273,6 @@ export default function CreateDocument({
                     ?.getAttribute('content') || '';
 
             // Tahap 1: Prepare job di server (render PNG & simpan file temp)
-            setGenerateProgress(30);
-            setGenerateStage(`Merender dokumen ${selectedTemplate.name}...`);
-
             const prepareRes = await fetch('/documents/prepare', {
                 method: 'POST',
                 headers: {
@@ -271,6 +287,7 @@ export default function CreateDocument({
             });
 
             if (!prepareRes.ok) {
+                clearInterval(progressTimer);
                 const errData = await prepareRes.json().catch(() => ({}));
                 throw new Error(errData.message || 'Gagal menyiapkan dokumen.');
             }
@@ -278,21 +295,12 @@ export default function CreateDocument({
             const prepareData = await prepareRes.json();
             const jobId: string = prepareData.job_id;
 
-            setGenerateProgress(70);
-            setGenerateStage('Menyiapkan file unduhan...');
-
             // Tahap 2: Polling status sampai file siap di disk server
             let attempts = 0;
             const maxAttempts = 20;
             await new Promise<void>((resolve, reject) => {
                 const poll = () => {
                     attempts++;
-                    const prog = Math.min(
-                        70 + Math.floor((attempts / maxAttempts) * 25),
-                        94,
-                    );
-                    setGenerateProgress(prog);
-
                     fetch(`/documents/status/${jobId}`, {
                         headers: { Accept: 'application/json' },
                     })
@@ -303,23 +311,30 @@ export default function CreateDocument({
                             } else if (attempts >= maxAttempts) {
                                 reject(new Error('Timeout: file dokumen tidak kunjung siap.'));
                             } else {
-                                setTimeout(poll, 400);
+                                setTimeout(poll, 300);
                             }
                         })
                         .catch(() => {
                             if (attempts >= maxAttempts) {
                                 reject(new Error('Gagal memeriksa status dokumen.'));
                             } else {
-                                setTimeout(poll, 400);
+                                setTimeout(poll, 300);
                             }
                         });
                 };
                 poll();
             });
 
+            clearInterval(progressTimer);
+
             // Tahap 3: Trigger native browser download via window.location
-            setGenerateProgress(98);
+            setGenerateProgress(92);
             setGenerateStage('File PNG siap! Membuka unduhan...');
+
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            setGenerateProgress(100);
+
+            await new Promise((resolve) => setTimeout(resolve, 200));
 
             window.location.href = `/documents/download-file/${jobId}`;
 
@@ -329,8 +344,9 @@ export default function CreateDocument({
                 setIsGenerating(false);
                 setGenerateProgress(0);
                 setGenerateStage('');
-            }, 2000);
+            }, 1800);
         } catch (err: any) {
+            clearInterval(progressTimer);
             toast.error(err.message || 'Gagal menyimpan dan membuat dokumen.');
             setIsGenerating(false);
             setGenerateProgress(0);

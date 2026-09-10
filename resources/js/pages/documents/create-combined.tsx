@@ -347,8 +347,29 @@ export default function CreateCombinedPage({
     // Action 3: Save to DB & Download Word Document (Hybrid: Prepare -> Status -> Native Browser Download)
     const handleGenerateWord = async () => {
         setIsGeneratingWord(true);
-        setWordProgress(15);
+        setWordProgress(10);
         setWordStage('Menyimpan data STNK & PAJAK ke history...');
+
+        // Progress timer agar loading bar bergerak mulus selama proses render & susun Word di server
+        let currentProgress = 10;
+        const progressTimer = setInterval(() => {
+            if (currentProgress < 85) {
+                const diff = 85 - currentProgress;
+                const increment = Math.max(1, Math.round(diff * 0.08));
+                currentProgress = Math.min(currentProgress + increment, 85);
+                setWordProgress(currentProgress);
+
+                if (currentProgress < 30) {
+                    setWordStage('Menyimpan data STNK & PAJAK ke history...');
+                } else if (currentProgress < 55) {
+                    setWordStage('Merender gambar STNK & PAJAK...');
+                } else if (currentProgress < 75) {
+                    setWordStage('Menyusun tata letak Word A4 Landscape...');
+                } else {
+                    setWordStage('Menyelesaikan dokumen Word (.docx)...');
+                }
+            }
+        }, 120);
 
         try {
             const token =
@@ -357,9 +378,6 @@ export default function CreateCombinedPage({
                     ?.getAttribute('content') || '';
 
             // Tahap 1: Prepare job di server (render gambar STNK & PAJAK + susun DOCX temp)
-            setWordProgress(35);
-            setWordStage('Merender gambar & menyusun 2 Halaman Word A4 Landscape...');
-
             const prepareRes = await fetch('/documents/combined/prepare-word', {
                 method: 'POST',
                 headers: {
@@ -373,6 +391,7 @@ export default function CreateCombinedPage({
             });
 
             if (!prepareRes.ok) {
+                clearInterval(progressTimer);
                 const errData = await prepareRes.json().catch(() => ({}));
                 throw new Error(errData.message || 'Gagal menyiapkan dokumen Word.');
             }
@@ -380,21 +399,12 @@ export default function CreateCombinedPage({
             const prepareData = await prepareRes.json();
             const jobId: string = prepareData.job_id;
 
-            setWordProgress(70);
-            setWordStage('Menyusun dokumen Word...');
-
             // Tahap 2: Polling status sampai file DOCX siap di disk server
             let attempts = 0;
             const maxAttempts = 25;
             await new Promise<void>((resolve, reject) => {
                 const poll = () => {
                     attempts++;
-                    const prog = Math.min(
-                        70 + Math.floor((attempts / maxAttempts) * 25),
-                        94,
-                    );
-                    setWordProgress(prog);
-
                     fetch(`/documents/combined/status-word/${jobId}`, {
                         headers: { Accept: 'application/json' },
                     })
@@ -405,23 +415,30 @@ export default function CreateCombinedPage({
                             } else if (attempts >= maxAttempts) {
                                 reject(new Error('Timeout: file dokumen Word tidak kunjung siap.'));
                             } else {
-                                setTimeout(poll, 400);
+                                setTimeout(poll, 300);
                             }
                         })
                         .catch(() => {
                             if (attempts >= maxAttempts) {
                                 reject(new Error('Gagal memeriksa status dokumen Word.'));
                             } else {
-                                setTimeout(poll, 400);
+                                setTimeout(poll, 300);
                             }
                         });
                 };
                 poll();
             });
 
-            // Tahap 3: Trigger native browser download via window.location
-            setWordProgress(98);
+            clearInterval(progressTimer);
+
+            // Tahap 3: Animasi transisi mulus ke 100% lalu buka unduhan native
+            setWordProgress(92);
             setWordStage('File siap! Membuka unduhan...');
+
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            setWordProgress(100);
+
+            await new Promise((resolve) => setTimeout(resolve, 200));
 
             window.location.href = `/documents/combined/download-word/${jobId}`;
 
@@ -431,8 +448,9 @@ export default function CreateCombinedPage({
                 setIsGeneratingWord(false);
                 setWordProgress(0);
                 setWordStage('');
-            }, 2000);
+            }, 1800);
         } catch (err: any) {
+            clearInterval(progressTimer);
             toast.error(err.message || 'Gagal menyimpan & mengunduh dokumen Word.');
             setIsGeneratingWord(false);
             setWordProgress(0);

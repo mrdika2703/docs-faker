@@ -144,9 +144,30 @@ export default function MergePage({
         if (!hasSelection) return;
 
         setIsDownloading(true);
-        setDownloadProgress(5);
+        setDownloadProgress(10);
         setDownloadStage('Menyiapkan data STNK & PAJAK...');
         setDownloadError(null);
+
+        // Progress timer agar loading bar bergerak mulus dan dinamis selama proses render di server
+        let currentProgress = 10;
+        const progressTimer = setInterval(() => {
+            if (currentProgress < 85) {
+                const diff = 85 - currentProgress;
+                const increment = Math.max(1, Math.round(diff * 0.08));
+                currentProgress = Math.min(currentProgress + increment, 85);
+                setDownloadProgress(currentProgress);
+
+                if (currentProgress < 30) {
+                    setDownloadStage('Menyiapkan data STNK & PAJAK...');
+                } else if (currentProgress < 55) {
+                    setDownloadStage('Merender gambar STNK & PAJAK...');
+                } else if (currentProgress < 75) {
+                    setDownloadStage('Menyusun tata letak Word A4 Landscape...');
+                } else {
+                    setDownloadStage('Menyelesaikan file .docx...');
+                }
+            }
+        }, 120);
 
         try {
             const token =
@@ -157,9 +178,6 @@ export default function MergePage({
                 )?.content || '';
 
             // --- Tahap 1: Kirim request prepare, server render PNG + build DOCX ---
-            setDownloadProgress(15);
-            setDownloadStage('Merender gambar dokumen...');
-
             const prepareRes = await fetch('/documents/merge/prepare', {
                 method: 'POST',
                 headers: {
@@ -174,6 +192,7 @@ export default function MergePage({
             });
 
             if (!prepareRes.ok) {
+                clearInterval(progressTimer);
                 const errData = await prepareRes.json().catch(() => ({}));
                 throw new Error(
                     errData.message || 'Gagal menyiapkan dokumen Word.',
@@ -183,33 +202,13 @@ export default function MergePage({
             const prepareData = await prepareRes.json();
             const jobId: string = prepareData.job_id;
 
-            setDownloadProgress(70);
-            setDownloadStage('Menyusun layout Word A4 Landscape...');
-
-            // --- Tahap 2: Poll status sampai ready (seharusnya langsung ready karena prepare sudah selesai) ---
+            // --- Tahap 2: Poll status bila belum ready ---
             let attempts = 0;
-            const maxAttempts = 30; // maks 30 x 600ms = 18 detik
-            const stageMessages = [
-                'Menyusun dokumen Word...',
-                'Menata tata letak halaman...',
-                'Menyesuaikan posisi gambar...',
-                'Menyelesaikan file .docx...',
-            ];
+            const maxAttempts = 20;
 
             await new Promise<void>((resolve, reject) => {
                 const poll = () => {
                     attempts++;
-                    const stageMsg =
-                        stageMessages[
-                            Math.min(attempts - 1, stageMessages.length - 1)
-                        ];
-                    const prog = Math.min(
-                        70 + Math.floor((attempts / maxAttempts) * 25),
-                        94,
-                    );
-                    setDownloadProgress(prog);
-                    setDownloadStage(stageMsg);
-
                     fetch(`/documents/merge/status/${jobId}`, {
                         headers: { Accept: 'application/json' },
                     })
@@ -224,7 +223,7 @@ export default function MergePage({
                                     ),
                                 );
                             } else {
-                                setTimeout(poll, 600);
+                                setTimeout(poll, 300);
                             }
                         })
                         .catch(() => {
@@ -235,16 +234,23 @@ export default function MergePage({
                                     ),
                                 );
                             } else {
-                                setTimeout(poll, 600);
+                                setTimeout(poll, 300);
                             }
                         });
                 };
                 poll();
             });
 
-            // --- Tahap 3: Redirect browser ke URL download (browser tampilkan progress native) ---
-            setDownloadProgress(98);
+            clearInterval(progressTimer);
+
+            // --- Tahap 3: Animasi transisi mulus ke 100% lalu buka unduhan native ---
+            setDownloadProgress(92);
             setDownloadStage('File siap! Membuka unduhan...');
+
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            setDownloadProgress(100);
+
+            await new Promise((resolve) => setTimeout(resolve, 200));
 
             // Buka download via window.location (GET) agar browser bisa tampilkan progress download nyata
             window.location.href = `/documents/merge/download/${jobId}`;
@@ -254,8 +260,9 @@ export default function MergePage({
                 setIsDownloading(false);
                 setDownloadProgress(0);
                 setDownloadStage('');
-            }, 2000);
+            }, 1800);
         } catch (err: any) {
+            clearInterval(progressTimer);
             setDownloadError(
                 err.message || 'Terjadi kesalahan saat mengunduh dokumen.',
             );
